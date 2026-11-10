@@ -78,7 +78,12 @@
   #skanner .sk-lukk{font:inherit;font-weight:700;background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:999px;padding:8px 14px;cursor:pointer}
   #skanner .sk-vid{position:relative;flex:1;overflow:hidden;display:grid;place-items:center}
   #skanner video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-  #skanner .sk-ramme{position:relative;width:min(68vw,300px);aspect-ratio:1;border-radius:22px;box-shadow:0 0 0 9999px rgba(11,18,32,.55);border:3px solid rgba(255,255,255,.9)}
+  #skanner .sk-ramme{position:relative;width:min(68vw,300px);aspect-ratio:1;border-radius:22px;box-shadow:0 0 0 9999px rgba(11,18,32,.55);border:3px solid rgba(255,255,255,.9);
+    display:grid;place-items:center;transition:border-color .15s,background .15s}
+  #skanner .sk-ramme.ok{border-color:#2fd48a;border-width:5px;background:rgba(47,212,138,.18)}
+  #skanner .sk-ramme span{font-size:26px;font-weight:800;color:#fff;background:#12805c;padding:8px 14px;border-radius:12px}
+  #skanner .sk-knapper{display:flex;gap:6px}
+  #skanner .sk-lukk.on{background:#ffd54a;color:#0b1220}
   #skanner .sk-bunn{padding:16px 18px calc(18px + env(safe-area-inset-bottom));text-align:center}
   #skanner .sk-tekst{margin:0 0 12px;font-size:15px;opacity:.9}
   #skanner .sk-nr{display:flex;gap:8px;margin-top:10px}
@@ -1214,20 +1219,72 @@ const detektor = (() => {
   try { return ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['qr_code'] }) : null; } catch (e) { return null; }
 })();
 
-async function finnKode(kilde, b, h){
+let skCanvas = null;
+// midt = true: les bare kvadratet i midten (der rammen er) – mye raskere enn hele bildet
+async function finnKode(kilde, b, h, midt){
   if (detektor) {
     try { const r = await detektor.detect(kilde); if (r && r[0]) return r[0].rawValue; } catch (e) {}
   }
   if (window.jsQR) {
-    const skala = Math.min(1, 900 / Math.max(b, h));
-    const c = document.createElement('canvas');
-    c.width = Math.round(b * skala); c.height = Math.round(h * skala);
+    let sx = 0, sy = 0, sw = b, sh = h;
+    if (midt) { const side = Math.round(Math.min(b, h) * 0.75); sx = Math.round((b - side) / 2); sy = Math.round((h - side) / 2); sw = sh = side; }
+    const maks = midt ? 520 : 1000;
+    const skala = Math.min(1, maks / Math.max(sw, sh));
+    const c = skCanvas || (skCanvas = document.createElement('canvas'));
+    const cw = Math.round(sw * skala), ch = Math.round(sh * skala);
+    if (c.width !== cw) c.width = cw;
+    if (c.height !== ch) c.height = ch;
     const ctx = c.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(kilde, 0, 0, c.width, c.height);
-    const r = window.jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts: 'dontInvert' });
+    ctx.drawImage(kilde, sx, sy, sw, sh, 0, 0, cw, ch);
+    const r = window.jsQR(ctx.getImageData(0, 0, cw, ch).data, cw, ch, { inversionAttempts: midt ? 'dontInvert' : 'attemptBoth' });
     if (r) return r.data;
   }
   return null;
+}
+
+/* ---------- Bekreftelse: pling + vibrasjon ---------- */
+let lydCtx = null;
+const lydPa = () => store.get('lyd', true);
+function laasOppLyd(){            // må kalles i et trykk (iPhone krever det)
+  try {
+    if (!lydCtx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) lydCtx = new AC(); }
+    if (lydCtx && lydCtx.state === 'suspended') lydCtx.resume();
+    if (lydCtx) { const b = lydCtx.createBuffer(1, 1, 22050), s = lydCtx.createBufferSource(); s.buffer = b; s.connect(lydCtx.destination); s.start(0); }
+  } catch (e) {}
+}
+function pling(){
+  if (!lydPa() || !lydCtx) return;
+  try {
+    const t = lydCtx.currentTime;
+    [[1318.5, 0], [1760, 0.09]].forEach(([f, d]) => {
+      const o = lydCtx.createOscillator(), g = lydCtx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(0.35, t + d + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.16);
+      o.connect(g); g.connect(lydCtx.destination); o.start(t + d); o.stop(t + d + 0.18);
+    });
+  } catch (e) {}
+}
+function vibrer(){
+  try { if (navigator.vibrate) { navigator.vibrate([70]); return; } } catch (e) {}
+  // iPhone (iOS 18+): et «switch»-felt gir et lite haptisk klikk når det trykkes
+  try {
+    let l = document.getElementById('haptikk');
+    if (!l) {
+      l = document.createElement('label'); l.id = 'haptikk';
+      l.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';
+      l.innerHTML = '<input type="checkbox" switch>';
+      document.body.appendChild(l);
+    }
+    l.click();
+  } catch (e) {}
+}
+function bekreftTreff(id){
+  vibrer(); pling();
+  const r = document.querySelector('#skanner .sk-ramme');
+  if (r) { r.classList.add('ok'); r.innerHTML = '<span>✓ Nr. ' + esc(id) + '</span>'; }
+  const t = document.getElementById('skTekst'); if (t) t.textContent = 'Henter skiene …';
 }
 
 function apneSkanner(){
@@ -1236,7 +1293,10 @@ function apneSkanner(){
   const o = document.createElement('div');
   o.id = 'skanner';
   o.innerHTML =
-    '<div class="sk-top"><b>Skann QR-koden på skiene</b><button class="sk-lukk" id="skLukk">Lukk</button></div>' +
+    '<div class="sk-top"><b>Skann QR-koden</b><span class="sk-knapper">' +
+      '<button class="sk-lukk" id="skLys" hidden aria-label="Lommelykt">🔦</button>' +
+      '<button class="sk-lukk" id="skLyd" aria-label="Lyd av/på">' + (lydPa() ? '🔊' : '🔇') + '</button>' +
+      '<button class="sk-lukk" id="skLukk">Lukk</button></span></div>' +
     '<div class="sk-vid" id="skVid"><video id="skVideo" playsinline muted autoplay></video><div class="sk-ramme"></div></div>' +
     '<div class="sk-bunn"><p class="sk-tekst" id="skTekst">Hold koden inni rammen.</p>' +
       '<label class="btn big" style="background:rgba(255,255,255,.14);color:#fff">Ta bilde i stedet' +
@@ -1245,6 +1305,7 @@ function apneSkanner(){
       '<p class="sk-feil" id="skFeil"></p></div>';
   document.body.appendChild(o);
   document.getElementById('skLukk').onclick = lukkSkanner;
+  document.getElementById('skLyd').onclick = ev => { const på = !lydPa(); store.set('lyd', på); ev.currentTarget.textContent = på ? '🔊' : '🔇'; if (på) { laasOppLyd(); pling(); } };
   document.getElementById('skFil').onchange = lesBilde;
   document.getElementById('skNr').onsubmit = e => {
     e.preventDefault();
@@ -1286,24 +1347,37 @@ function kameraUtilgjengelig(){
 async function startKamera(){
   if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return kameraUtilgjengelig();
   try {
-    skStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    skStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+    });
   } catch (e) { return kameraUtilgjengelig(); }
   const video = document.getElementById('skVideo');
   if (!video) { stoppKamera(); return; }
   video.srcObject = skStream;
   try { await video.play(); } catch (e) {}
+  // kontinuerlig autofokus og lommelykt der telefonen støtter det
+  try {
+    const spor = skStream.getVideoTracks()[0], kap = spor.getCapabilities ? spor.getCapabilities() : {};
+    if (kap.focusMode && kap.focusMode.indexOf('continuous') >= 0) spor.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+    if (kap.torch) {
+      const lk = document.getElementById('skLys'); lk.hidden = false;
+      let på = false;
+      lk.onclick = () => { på = !på; spor.applyConstraints({ advanced: [{ torch: på }] }).catch(() => {}); lk.classList.toggle('on', på); };
+    }
+  } catch (e) {}
   if (!detektor && !window.jsQR) document.getElementById('skTekst').textContent = 'Laster skanner …';
-  let opptatt = false;
-  skTimer = setInterval(async () => {
-    if (opptatt || skFerdig || !video.videoWidth) return;
-    opptatt = true;
-    try {
-      const k = await finnKode(video, video.videoWidth, video.videoHeight);
-      if (k) treff(k);
-      else if (window.jsQR || detektor) document.getElementById('skTekst').textContent = 'Hold koden inni rammen.';
-    } catch (e) {}
-    opptatt = false;
-  }, 250);
+  const runde = async () => {
+    if (skFerdig || !skStream) return;
+    if (video.videoWidth) {
+      try {
+        const k = await finnKode(video, video.videoWidth, video.videoHeight, true);
+        if (k) { treff(k); return; }
+        if (window.jsQR || detektor) { const t = document.getElementById('skTekst'); if (t && /Laster/.test(t.textContent)) t.textContent = 'Hold koden inni rammen.'; }
+      } catch (e) {}
+    }
+    skTimer = setTimeout(runde, 60);
+  };
+  runde();
 }
 
 function lesBilde(e){
@@ -1328,13 +1402,13 @@ function treff(kode){
   const id = idFraKode(kode);
   if (!id) { const f = document.getElementById('skFeil'); if (f) f.textContent = 'Dette er ikke en QR-kode fra demoskiene.'; return; }
   skFerdig = true;
-  try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {}
-  lukkSkanner();
-  visSki(id);
+  bekreftTreff(id);
+  stoppKamera();
+  setTimeout(() => { lukkSkanner(); visSki(id); }, 450);   // la grønn ramme og pling synes et øyeblikk
 }
 
 function stoppKamera(){
-  clearInterval(skTimer); skTimer = null;
+  clearTimeout(skTimer); skTimer = null;
   if (skStream) { skStream.getTracks().forEach(t => t.stop()); skStream = null; }
 }
 function lukkSkanner(){
@@ -1345,7 +1419,7 @@ function lukkSkanner(){
 
 document.addEventListener('click', e => {
   const t = e.target.closest && e.target.closest('[data-skann]');
-  if (t) { e.preventDefault(); apneSkanner(); }
+  if (t) { e.preventDefault(); laasOppLyd(); apneSkanner(); }
 });
 
 function alertBox(msg){
