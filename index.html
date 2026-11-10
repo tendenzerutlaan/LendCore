@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demoski</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
+<style>
+  :root{
+    --bg:#eef2f6; --card:#fff; --ink:#0f1b2d; --muted:#5b6b80; --line:#d9e1ea;
+    --accent:#0b5fff; --accent-ink:#fff; --ok:#12805c; --ok-bg:#e3f5ec;
+    --warn:#b54708; --warn-bg:#fdf0e1; --bad:#c0262d; --bad-bg:#fde8e8; --r:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%}
+  header.top{background:var(--ink);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px}
+  header.top .logo{font-weight:800;letter-spacing:.14em;font-size:15px;white-space:nowrap}
+  header.top .logo span{color:#7fb0ff}
+  header.top .right{margin-left:auto;font-size:13px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  main{max-width:560px;margin:0 auto;padding:16px 14px 60px}
+  main.wide{max-width:980px}
+  .card{background:var(--card);border-radius:var(--r);padding:18px;margin-bottom:14px;
+    box-shadow:0 1px 2px rgba(15,27,45,.06),0 4px 16px rgba(15,27,45,.04)}
+  h1{font-size:26px;line-height:1.15;margin:6px 0 4px}
+  h2{font-size:18px;margin:0 0 12px}
+  .muted{color:var(--muted)} .small{font-size:14px}
+  .pill{display:inline-block;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px}
+  .pill.ok{background:var(--ok-bg);color:var(--ok)}
+  .pill.warn{background:var(--warn-bg);color:var(--warn)}
+  .pill.bad{background:var(--bad-bg);color:var(--bad)}
+  .pill.grey{background:#eef1f5;color:var(--muted)}
+  label{display:block;font-weight:600;font-size:14px;margin:0 0 12px}
+  label .opt{font-weight:400;color:var(--muted)}
+  input[type=text],input[type=tel],input[type=email],input[type=date],input[type=password],input[type=search]{
+    display:block;width:100%;margin-top:6px;font:inherit;font-size:17px;padding:13px 14px;
+    border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);-webkit-appearance:none}
+  input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,95,255,.15)}
+  fieldset{border:0;padding:0;margin:0 0 14px}
+  legend{font-weight:600;font-size:14px;margin-bottom:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chips label{margin:0;font-weight:600}
+  .chips input{position:absolute;opacity:0;pointer-events:none}
+  .chips span{display:inline-block;padding:10px 14px;border:1.5px solid var(--line);border-radius:999px;cursor:pointer;user-select:none}
+  .chips input:checked+span{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .check{display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:15px}
+  .check input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:700;
+    border:0;border-radius:12px;padding:12px 16px;cursor:pointer;background:#e7ecf2;color:var(--ink);text-decoration:none}
+  .btn.primary{background:var(--accent);color:var(--accent-ink)}
+  .btn.ok{background:var(--ok);color:#fff}
+  .btn.danger{background:var(--bad);color:#fff}
+  .btn.big{width:100%;font-size:18px;padding:16px}
+  .btn:disabled{opacity:.55}
+  .btn.link{background:none;padding:6px 0;color:var(--accent);font-weight:600}
+  .err{color:var(--bad);font-weight:600;min-height:1.2em;margin:10px 0 0}
+  .note{background:#f3f6fa;border-radius:12px;padding:12px 14px;font-size:14px;color:var(--muted);margin:0 0 14px}
+  .done{text-align:center;padding:30px 20px}
+  .done .ico{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px;
+    background:var(--ok-bg);color:var(--ok);font-size:40px;font-weight:800}
+  .okbanner{display:flex;gap:12px;align-items:center;background:var(--ok-bg);color:#0b4d38;box-shadow:none}
+  .ico-s{width:36px;height:36px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+  .timer{text-align:center}
+  .timer .tlabel{font-weight:600;color:var(--muted);font-size:15px}
+  .timer .tid{font-size:44px;font-weight:800;line-height:1.1;margin:6px 0 14px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .timer .prog{height:10px;background:#eef1f5;border-radius:6px;overflow:hidden;margin-bottom:14px}
+  .timer .prog i{display:block;height:100%;width:0;background:var(--accent);border-radius:6px;transition:width .4s}
+  .timer .tider{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);text-align:left}
+  .timer .tider b{color:var(--ink)}
+  .timer.snart .tid{color:var(--warn)} .timer.snart .prog i{background:var(--warn)}
+  .timer.over{background:var(--bad-bg)} .timer.over .tid,.timer.over .tlabel{color:var(--bad)} .timer.over .prog i{background:var(--bad)}
+  .skannknapp{margin-bottom:14px}
+  #skanner{position:fixed;inset:0;z-index:50;background:#0b1220;color:#fff;display:flex;flex-direction:column}
+  #skanner .sk-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px}
+  #skanner .sk-top b{font-size:17px}
+  #skanner .sk-lukk{font:inherit;font-weight:700;background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:999px;padding:8px 14px;cursor:pointer}
+  #skanner .sk-vid{position:relative;flex:1;overflow:hidden;display:grid;place-items:center}
+  #skanner video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  #skanner .sk-ramme{position:relative;width:min(68vw,300px);aspect-ratio:1;border-radius:22px;box-shadow:0 0 0 9999px rgba(11,18,32,.55);border:3px solid rgba(255,255,255,.9)}
+  #skanner .sk-bunn{padding:16px 18px calc(18px + env(safe-area-inset-bottom));text-align:center}
+  #skanner .sk-tekst{margin:0 0 12px;font-size:15px;opacity:.9}
+  #skanner .sk-nr{display:flex;gap:8px;margin-top:10px}
+  #skanner .sk-nr input{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 14px;border-radius:12px;border:0;background:rgba(255,255,255,.95);color:#0f1b2d}
+  #skanner .sk-feil{color:#ffb4b4;font-weight:600;min-height:1.2em;margin:10px 0 0}
+  #skanner .sk-alt{max-width:420px;margin:0 auto;padding:30px 20px;text-align:center}
+  .spinner{width:34px;height:34px;border:4px solid var(--line);border-top-color:var(--accent);border-radius:50%;
+    animation:spin .8s linear infinite;margin:60px auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .row{display:flex;gap:10px;align-items:center}
+  .row>*{flex:1}
+  .tabs{display:flex;gap:6px;background:#dfe6ee;padding:4px;border-radius:14px;margin-bottom:14px}
+  .tabs button{flex:1;font:inherit;font-weight:700;font-size:15px;border:0;background:none;padding:10px 6px;border-radius:10px;color:var(--muted);cursor:pointer}
+  .tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .loan{border-left:5px solid var(--line)}
+  .loan.over{border-left-color:var(--bad)}
+  .loan.today{border-left-color:var(--warn)}
+  .loan .head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .loan .who{font-size:17px;font-weight:700;margin:6px 0 2px}
+  .loan .acts{display:flex;gap:8px;margin-top:12px}
+  .loan .acts>*{flex:1}
+  .imp-liste{max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+  .imp-rad{display:flex;flex-direction:column;padding:9px 12px;border-bottom:1px solid var(--line);font-size:14px}
+  .imp-rad:last-child{border-bottom:0}
+  .imp-rad span{color:var(--muted)}
+  .meny-knapp{padding:10px 12px;margin-left:6px;flex:none;font-size:18px;line-height:1}
+  .meny{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 12px 23px;border-bottom:1px solid var(--line)}
+  .grp .meny{padding-left:0;border-bottom:0;margin-top:10px}
+  .btn.farlig{background:var(--bad-bg);color:var(--bad)}
+  .btn.farlig[data-sikker="1"]{background:var(--bad);color:#fff}
+  .grp .row>*{flex:initial}
+  .grp .row>div:first-child{flex:1}
+  .skilist .grp{padding-bottom:10px;border-bottom:2px solid var(--line)}
+  .skilist .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .skilist .item:last-child{border-bottom:0}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .dot.ok{background:var(--ok)} .dot.out{background:var(--warn)} .dot.off{background:#b8c2cf}
+  .skilist .grow{flex:1;min-width:0}
+  .skilist .id{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+  .labels{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .label{background:#fff;border:1px dashed #b8c2cf;border-radius:10px;padding:10px;text-align:center;break-inside:avoid}
+  .label .qr{width:100%;aspect-ratio:1;display:grid;place-items:center}
+  .label .qr img,.label .qr canvas{width:100%!important;height:auto!important}
+  .label .lid{font-weight:800;font-size:18px;margin-top:6px;letter-spacing:.04em}
+  .label .lnavn{font-size:12px;color:var(--muted);line-height:1.25}
+  .label .llen{font-size:15px;font-weight:700}
+  .label{cursor:pointer}
+  .label.av{opacity:.25}
+  /* ---- Lapp-design (samme på skjerm og papir, i mm) ---- */
+  .utskrift{display:none}
+  .forh{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:4px 0 10px}
+  .forh .pl{outline:1px dashed #b8c2cf;outline-offset:0;border-radius:2mm;cursor:pointer;box-shadow:0 2px 10px rgba(15,27,45,.08)}
+  .forh .pl.av{opacity:.22}
+  .pl{box-sizing:border-box;overflow:hidden;background:#fff;color:#000;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+      display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pl .qr{display:grid;place-items:center;flex:none}
+  .pl .qr img,.pl .qr canvas{width:100%!important;height:auto!important;image-rendering:pixelated}
+  .pl .firma{font-size:6.6pt;font-weight:800;letter-spacing:.2em;text-transform:uppercase;line-height:1;
+      padding-bottom:1mm;border-bottom:.35mm solid #000;white-space:nowrap;overflow:hidden}
+  .pl .modell{font-size:8.5pt;font-weight:700;line-height:1.12;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .pl .len{font-size:17pt;font-weight:800;line-height:1;letter-spacing:-.02em;margin-top:.8mm;white-space:nowrap}
+  .pl .bunn{margin-top:auto;font-size:5.2pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;line-height:1;white-space:nowrap;overflow:hidden}
+  .pl .nrboks{display:inline-flex;align-items:baseline;gap:1mm;border:.45mm solid #000;border-radius:1.2mm;padding:.5mm 1.6mm .7mm;margin-top:1.2mm;line-height:1}
+  .pl .nrboks small{font-size:5.6pt;font-weight:800;letter-spacing:.06em}
+  .pl .nrboks b{font-size:14pt;font-weight:800;letter-spacing:.03em;font-variant-numeric:tabular-nums}
+  /* A4-ark: 63,5 × 33,9 mm, liggende */
+  .pl.ark{width:63.5mm;height:33.9mm;padding:2mm 2.8mm 1.8mm}
+  .pl.ark .firma{font-size:6pt;padding-bottom:.8mm}
+  .pl.ark .midt{flex:1;display:flex;align-items:center;gap:2.6mm;min-height:0;padding:.8mm 0 .6mm}
+  .pl.ark .qr{width:21.5mm;height:21.5mm}
+  .pl.ark .lt{flex:1;min-width:0}
+  .pl.ark .modell{font-size:7.8pt;-webkit-line-clamp:1;white-space:nowrap;text-overflow:ellipsis;display:block}
+  .pl.ark .len{font-size:13pt;margin-top:.5mm}
+  .pl.ark .nrboks{margin-top:1mm}
+  .pl.ark .nrboks b{font-size:15pt}
+  .pl.ark .bunn{font-size:4.8pt}
+  /* Etikettskriver: 33,9 × 63,5 mm, stående */
+  .pl.etikett{width:33.9mm;height:63.5mm;padding:2.6mm 2.4mm 2.2mm;align-items:stretch;text-align:center}
+  .pl.etikett .firma{text-align:center;font-size:6pt;letter-spacing:.18em}
+  .pl.etikett .qr{width:26mm;height:26mm;margin:2mm auto 1.4mm}
+  .pl.etikett .modell{font-size:8pt}
+  .pl.etikett .len{font-size:14pt;margin-top:.8mm}
+  .pl.etikett .lt{display:flex;flex-direction:column;align-items:center}
+  .pl.etikett .nrboks{margin-top:1.8mm}
+  .pl.etikett .nrboks b{font-size:17pt}
+  .pl.etikett .bunn{text-align:center;font-size:4.6pt;letter-spacing:.04em}
+  select.velg{font:inherit;font-size:16px;width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);margin-top:2px}
+  .label .lcta{font-size:11px;font-weight:700;margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .stat{background:#fff;border-radius:14px;padding:12px;text-align:center}
+  .stat b{display:block;font-size:26px;line-height:1.1}
+  .stat span{font-size:12px;color:var(--muted);font-weight:600}
+  .stat.bad b{color:var(--bad)}
+  .seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .seg button{font:inherit;font-size:14px;font-weight:600;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;cursor:pointer;color:var(--ink)}
+  .seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .bar{display:grid;grid-template-columns:minmax(96px,40%) 1fr 38px;gap:10px;align-items:center;padding:7px 0;font-size:15px}
+  .bar .bl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar .bt{height:12px;background:#eef1f5;border-radius:6px;overflow:hidden}
+  .bar .bt i{display:block;height:100%;background:var(--accent);border-radius:6px}
+  .bar .bn{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .sub{margin:2px 0 10px 8px;padding-left:12px;border-left:3px solid var(--line);font-size:14px}
+  .sub .bt i{background:#7fb0ff}
+  .mxwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table.mx{border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+  table.mx th,table.mx td{padding:7px 9px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+  table.mx tbody th{text-align:left;font-weight:600}
+  table.mx tr.sum td,table.mx tr.sum th{font-weight:800;border-bottom:0}
+  details summary{cursor:pointer;font-weight:700;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  #demo{background:#fff7d6;border-bottom:1px solid #f0dc8a;padding:8px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+  #demo[hidden]{display:none}
+  #demo b{margin-right:4px}
+  #demo button{font:inherit;font-size:13px;font-weight:600;border:1px solid #e2c95a;background:#fff;border-radius:999px;padding:5px 10px;cursor:pointer}
+  @media print{
+    header.top,#demo,#app > *:not(.utskrift){display:none!important}
+    html,body,main{background:#fff!important;padding:0!important;margin:0!important;max-width:none!important}
+    .utskrift{display:block!important;color:#000}
+    /* A4 liggende: 8 × 3 = 24 stående lapper à 33,9 × 63,5 mm (24-etiketters ark snudd på siden) */
+    .utskrift.ark .side{width:297mm;height:209mm;box-sizing:border-box;padding:7.25mm 12.9mm 0;display:grid;
+      grid-template-columns:repeat(8,33.9mm);grid-auto-rows:63.5mm;column-gap:0;row-gap:2.5mm;break-after:page;page-break-after:always;overflow:hidden}
+    .utskrift.ark .side:last-child{break-after:auto;page-break-after:auto}
+    /* etikettskriver: én lapp per side */
+    .utskrift.etikett .pl{break-after:page;page-break-after:always}
+    .utskrift.etikett .pl:last-child{break-after:auto;page-break-after:auto}
+  }</style>
+</head>
+<body>
+<script type="application/json" id="oppstart"><?!= oppstart ?></script>
+<div id="demo" hidden></div>
+<header class="top">
+  <div class="logo">DEMO<span>SKI</span></div>
+  <div class="right" id="topright"></div>
+</header>
+<main id="app"><div class="spinner"></div></main>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Oppstart ---------- */
+// ===== INNSTILLING: adressen til Google-skriptet (Distribuer → nettapp-adressen som slutter på /exec) =====
+const API_URL = 'https://script.google.com/macros/s/AKfycbw3m9Xof1HWUIOakrDJWrIKvlekeHWYqXBFOv7NhczqlU74Iu-gk5FWLSMfy6olyJBn/exec';
+// ==========================================================================================================
+
+let START = null;
+try { START = JSON.parse(document.getElementById('oppstart').textContent); } catch (e) {}
+const GOOGLE = !!(window.google && google.script && google.script.run);   // siden vises inne i Google Apps Script
+const NETT = !GOOGLE && !!API_URL;                                          // siden ligger på GitHub Pages e.l.
+const PREVIEW = !GOOGLE && !NETT;                                           // forhåndsvisning med eksempeldata
+if (!START || !GOOGLE) {
+  const q = new URLSearchParams(location.search);
+  START = {
+    ski: (q.get('ski') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40),
+    admin: q.has('admin'),
+    url: NETT ? location.origin + location.pathname : 'https://brukernavn.github.io/demoski/'
+  };
+}
+let DEMO = START.demo || { minutter: 60, tekst: '2–3 turer' };
+
+const app = document.getElementById('app');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let FIRMA = START.firma || 'Tendenzer AS';
+function visFirma(){
+  document.querySelector('header.top .logo').innerHTML = esc(FIRMA.replace(/\s+AS$/i, '').toUpperCase()) + ' <span>DEMOSKI</span>';
+  document.title = FIRMA.replace(/\s+AS$/i, '') + ' Demoski';
+}
+visFirma();
+const store = {
+  get(k, d){ try { const v = localStorage.getItem('demoski.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v){ try { localStorage.setItem('demoski.' + k, JSON.stringify(v)); } catch (e) {} }
+};
+// Ansatt-innloggingen huskes på telefonen til man logger ut, slik at QR-skanning gir ansattvisning.
+const sess = {
+  get(k){ try { return localStorage.getItem('demoski.' + k) || mem[k]; } catch (e) { return mem[k]; } },
+  set(k, v){ mem[k] = v; try { localStorage.setItem('demoski.' + k, v); } catch (e) {} },
+  del(k){ try { localStorage.removeItem('demoski.' + k); } catch (e) {} delete mem[k]; }
+};
+const mem = {};
+
+/* ---------- Backend ---------- */
+function api(fn){
+  const args = Array.prototype.slice.call(arguments, 1);
+  return new Promise((res, rej) => {
+    const fail = e => rej(new Error(String((e && e.message) || e).replace(/^(Exception|Error|Unntak|Feil):\s*/i, '')));
+    if (GOOGLE) {
+      google.script.run.withSuccessHandler(res).withFailureHandler(fail)[fn].apply(null, args);
+    } else if (NETT) {
+      // enkel POST uten egne headere (text/plain) – fungerer på tvers av domener mot Apps Script
+      const forsok = n => fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow' })
+        .then(r => r.json())
+        .then(j => j && j.ok ? res(j.data) : fail((j && j.feil) || 'Ukjent feil fra serveren.'))
+        .catch(() => n > 0 ? setTimeout(() => forsok(n - 1), 800) : fail('Får ikke kontakt med serveren. Sjekk nettet og prøv igjen.'));
+      forsok(1);
+    } else {
+      setTimeout(() => { try { res(JSON.parse(JSON.stringify(MOCK[fn].apply(null, args)))); } catch (e) { fail(e); } }, 300);
+    }
+  });
+}
+
+/* ---------- Tid ---------- */
+const DAG = 864e5;
+function dagStart(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
+function fmtTid(iso){
+  if (!iso) return '';
+  const d = new Date(iso), n = new Date();
+  const kl = d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+  const diff = Math.round((dagStart(d) - dagStart(n)) / DAG);
+  if (diff === 0) return 'i dag kl. ' + kl;
+  if (diff === 1) return 'i morgen kl. ' + kl;
+  if (diff === -1) return 'i går kl. ' + kl;
+  return d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }) + ' kl. ' + kl;
+}
+function isoDato(d){ const z = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+
+function laster(){ app.innerHTML = '<div class="spinner"></div>'; window.scrollTo(0, 0); }
+function vis(html){ app.innerHTML = html; window.scrollTo(0, 0); }
+function feilSide(msg, tilbake){
+  vis('<div class="card"><h2>Noe gikk galt</h2><p>' + esc(msg) + '</p><button class="btn" id="tb">Prøv igjen</button></div>');
+  document.getElementById('tb').onclick = tilbake;
+}
+
+/* ---------- KUNDE: startside ---------- */
+function visStart(){
+  app.className = '';
+  vis(
+    '<div class="card"><h1>Lån demoski</h1>' +
+    '<p class="muted">Skann QR-koden på skiene, så kommer du rett til riktig par.</p>' +
+    '<button class="btn primary big" data-skann>📷 Skann QR-kode</button></div>' +
+    '<form class="card" id="f"><label>Virker ikke QR-koden? Skriv nummeret på lappen<input type="text" name="id" placeholder="f.eks. 007" inputmode="numeric" autocapitalize="characters" required></label>' +
+    '<button class="btn big">Finn skiene</button></form>' +
+    '<p class="small" style="text-align:center"><button class="btn link" id="adm">For ansatte</button></p>'
+  );
+  document.getElementById('f').onsubmit = e => { e.preventDefault(); visSki(e.target.id.value.trim()); };
+  document.getElementById('adm').onclick = visAdmin;
+}
+
+/* ---------- KUNDE: ett par ski ---------- */
+let fraAdmin = false;
+async function visSki(id){
+  app.className = '';
+  laster();
+  const pin = sess.get('pin');
+  if (pin) {
+    try {
+      const d = await api('adminSki', pin, id);
+      fraAdmin = true;
+      document.getElementById('topright').textContent = d.bruker.navn + ' · ' + d.bruker.rolle + (PREVIEW ? ' · eksempeldata' : '');
+      return tegnAnsattSki(d);
+    } catch (e) {
+      if (!/PIN/i.test(e.message)) return feilSide(e.message, () => visSki(id));
+      sess.del('pin'); // utgått/deaktivert: vis kundesiden
+    }
+  }
+  fraAdmin = false;
+  const meg = store.get('meg', {});
+  try {
+    const d = await api('hentSki', id, meg.telefon || '');
+    tegnSki(d, meg);
+  } catch (e) { feilSide(e.message, visStart); }
+}
+
+function skiKort(ski, pill){
+  return '<section class="card">' + pill +
+    '<h1>' + esc(ski.navn || ski.modell) + '</h1>' +
+    '<div class="muted">Ski-ID ' + esc(ski.id) + (ski.notat ? ' · ' + esc(ski.notat) : '') + '</div></section>';
+}
+
+function tilbakeLenke(){
+  return fraAdmin ? '<p style="text-align:center"><button class="btn link" id="tilAdmin">← Til oversikten</button></p>' : '';
+}
+
+/* Ansatt har skannet et par */
+function tegnAnsattSki(d){
+  const ski = d.ski, l = d.lan;
+  const ansattMerke = '<div class="note" style="margin-bottom:14px">Du er logget inn som ansatt.</div>';
+  if (!ski.aktiv && !l) {
+    vis(ansattMerke + skiKort(ski, '<span class="pill grey">Ikke aktiv</span>') +
+      '<div class="card"><p style="margin:0">Paret er tatt ut av demo. En administrator kan ta det inn igjen under Ski → «Ikke i demo lenger».</p></div>' + tilbakeLenke());
+    return kobleTilbake();
+  }
+  if (!l) return tegnSki({ ski: ski, utlan: null, mine: [] }, {}); // ledig: utlånsskjema for ansatte
+
+  const st = statusFor(l);
+  const pill = st === 'over' ? '<span class="pill bad">Over frist</span>' : '<span class="pill warn">Utlånt</span>';
+  vis(ansattMerke + skiKort(ski, pill) +
+    '<div class="card loan ' + st + '"><div class="who" style="margin-top:0">' + esc(l.navn) + '</div>' +
+      '<div class="small muted">' + esc(l.type) + (l.butikk ? ' · ' + esc(l.butikk) : '') + ' · ute siden ' + esc(fmtTid(l.utlevert)) + '<br>' +
+      'Frist: <b style="color:var(--ink)">' + esc(fmtTid(l.frist)) + '</b><br>Tlf. ' + esc(l.telefon) + (l.epost ? ' · ' + esc(l.epost) : '') + '</div>' +
+      '<div class="acts"><a class="btn" target="_blank" href="tel:' + esc(l.telefon) + '">Ring</a>' +
+      '<a class="btn" target="_blank" href="sms:' + esc(l.telefon) + '">SMS</a></div></div>' +
+    '<div class="card"><button class="btn ok big" id="mottatt">Registrer som mottatt</button><p class="err" id="err"></p></div>' + tilbakeLenke());
+  kobleTilbake();
+  document.getElementById('mottatt').onclick = async ev => {
+    const b = ev.target; b.disabled = true; b.textContent = 'Registrerer …';
+    try {
+      ADM = await api('adminMottatt', sess.get('pin'), l.id);
+      ferdig('Mottatt', '<b>' + esc(ski.navn) + '</b> er registrert inn fra ' + esc(l.navn) + '.<br><br><span class="muted small">Skann neste par, eller gå tilbake til oversikten.</span>');
+    } catch (e) { document.getElementById('err').textContent = e.message; b.disabled = false; b.textContent = 'Registrer som mottatt'; }
+  };
+}
+function kobleTilbake(){
+  const b = document.getElementById('tilAdmin');
+  if (b) b.onclick = () => { fraAdmin = false; visAdmin(); };
+}
+
+function tegnSki(d, meg){
+  meg = meg || {};
+  const ski = d.ski, u = d.utlan;
+
+  if (!ski.aktiv && !u) {
+    vis(skiKort(ski, '<span class="pill grey">Ikke til utlån</span>') +
+      '<div class="card"><p>Disse skiene er ikke tilgjengelige akkurat nå. Spør oss på standen.</p></div>' + tilbakeLenke());
+    return kobleTilbake();
+  }
+
+  if (u && u.mitt) return aktivtLan(ski, u.utlevert, u.frist, meg.telefon, false, u.type);
+
+  if (u) {
+    vis(skiKort(ski, '<span class="pill warn">Utlånt</span>') +
+      '<div class="card"><p style="margin-top:0">Lånt av <b>' + esc(u.fornavn) + '</b> ' + esc(fmtTid(u.utlevert)) + '.</p>' +
+      '<form id="lf"><h2>Er dette dine ski?</h2><label>Mobilnummeret du lånte med<input type="tel" name="tlf" inputmode="tel" autocomplete="tel" required></label>' +
+      '<button class="btn primary big">Vis lånet mitt</button><p class="err" id="err"></p></form>' +
+      '<p class="small muted" style="margin:12px 0 0">Ikke dine ski? Spør oss på standen.</p></div>' + tilbakeLenke());
+    kobleTilbake();
+    document.getElementById('lf').onsubmit = async e => {
+      e.preventDefault();
+      const tlf = e.target.tlf.value.trim(), btn = e.target.querySelector('button'), err = document.getElementById('err');
+      if (tlf.replace(/\D/g, '').length < 8) { err.textContent = 'Skriv inn mobilnummeret ditt.'; return; }
+      btn.disabled = true; btn.textContent = 'Sjekker …'; err.textContent = '';
+      try {
+        const d2 = await api('hentSki', ski.id, tlf);
+        if (d2.utlan && d2.utlan.mitt) {
+          if (!fraAdmin) store.set('meg', Object.assign({}, store.get('meg', {}), { telefon: tlf }));
+          return aktivtLan(d2.ski, d2.utlan.utlevert, d2.utlan.frist, tlf, false, d2.utlan.type);
+        }
+        if (!d2.utlan) return tegnSki(d2, Object.assign({}, meg, { telefon: tlf })); // levert i mellomtiden
+        err.textContent = 'Nummeret stemmer ikke med det som ble brukt da skiene ble lånt.';
+      } catch (ex) { err.textContent = ex.message; }
+      btn.disabled = false; btn.textContent = 'Vis lånet mitt';
+    };
+    return;
+  }
+
+  // Ledig: låneskjema. Kunden velger ikke type (QR = skidemo); ansatte velger type når de låner ut fra oversikten.
+  if (fraAdmin) meg = {};
+  const type = fraAdmin ? store.get('ansattType', 'Bekjent') : 'Skidemo';
+  const chip = (v, t) => '<label><input type="radio" name="type" value="' + v + '"' + (type === v ? ' checked' : '') + '><span>' + t + '</span></label>';
+  const mine = (d.mine || []).map(m =>
+    '<label class="check"><input type="checkbox" name="lever" value="' + esc(m.id) + '" checked> Lever samtidig tilbake ' + esc(m.ski) + '</label>').join('');
+  const standard = isoDato(new Date(Date.now() + 14 * DAG));
+
+  vis(skiKort(ski, '<span class="pill ok">Ledig</span>') +
+    '<form class="card" id="f" novalidate><h2>' + (fraAdmin ? 'Lån ut disse skiene' : 'Lån disse skiene') + '</h2>' +
+    '<label>Navn<input type="text" name="navn" autocomplete="' + (fraAdmin ? 'off' : 'name') + '" value="' + esc(meg.navn || '') + '" required></label>' +
+    '<label>Mobilnummer<input type="tel" name="telefon" inputmode="tel" autocomplete="' + (fraAdmin ? 'off' : 'tel') + '" value="' + esc(meg.telefon || '') + '" required></label>' +
+    (fraAdmin
+      ? '<fieldset><legend>Type lån</legend><div class="chips">' + chip('Skidemo', 'Skidemo') + chip('Bekjent', 'Bekjent') + chip('Butikkansatt', 'Butikkansatt') + '</div></fieldset>'
+      : '<input type="radio" name="type" value="Skidemo" checked hidden>') +
+    '<div id="demoInfo" class="note">Ta <b>' + esc(DEMO.tekst) + '</b> (ca. ' + DEMO.minutter + ' min), og lever skiene på standen etterpå.</div>' +
+    '<div id="lengre">' +
+      '<label id="butikkL">Butikk<input type="text" name="butikk" value="' + esc(meg.butikk || '') + '"></label>' +
+      '<label>E-post <span class="opt">(valgfritt)</span><input type="email" name="epost" autocomplete="email" value="' + esc(meg.epost || '') + '"></label>' +
+      '<label>Leveres tilbake innen<input type="date" name="frist" value="' + standard + '" min="' + isoDato(new Date()) + '"></label>' +
+    '</div>' +
+    (mine ? '<div class="note" style="color:var(--ink)">' + mine + '</div>' : '') +
+    (fraAdmin ? '' : '<label class="check"><input type="checkbox" name="ok"> Jeg er ansvarlig for skiene til de er levert tilbake.</label>') +
+    '<button class="btn primary big" id="send">Lån skiene</button><p class="err" id="err"></p></form>' + tilbakeLenke());
+  kobleTilbake();
+
+  const f = document.getElementById('f');
+  const oppdater = () => {
+    const t = f.querySelector('input[name=type]:checked').value;
+    document.getElementById('demoInfo').hidden = t !== 'Skidemo';
+    document.getElementById('lengre').hidden = t === 'Skidemo';
+    document.getElementById('butikkL').hidden = t !== 'Butikkansatt';
+  };
+  f.querySelectorAll('input[name=type]').forEach(r => r.onchange = oppdater);
+  oppdater();
+
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const err = document.getElementById('err'), btn = document.getElementById('send');
+    const v = {
+      skiId: ski.id, navn: f.navn.value.trim(), telefon: f.telefon.value.trim(),
+      type: f.querySelector('input[name=type]:checked').value,
+      butikk: f.butikk.value.trim(), epost: f.epost.value.trim(), frist: f.frist.value,
+      leverIds: Array.prototype.map.call(f.querySelectorAll('input[name=lever]:checked'), x => x.value),
+      pin: fraAdmin ? sess.get('pin') : ''
+    };
+    if (v.navn.length < 2) { err.textContent = 'Skriv inn navnet ditt.'; return f.navn.focus(); }
+    if (v.telefon.replace(/\D/g, '').length < 8) { err.textContent = 'Skriv inn mobilnummeret ditt.'; return f.telefon.focus(); }
+    if (!fraAdmin && !f.ok.checked) { err.textContent = 'Kryss av for at du tar ansvar for skiene.'; return; }
+    err.textContent = ''; btn.disabled = true; btn.textContent = 'Registrerer …';
+    try {
+      const r = await api('laan', v);
+      if (fraAdmin) {
+        store.set('ansattType', v.type);
+        return ferdig('Utlånt', '<b>' + esc(r.ski.navn) + '</b> er lånt ut til <b>' + esc(v.navn) + '</b> (' + esc(r.type) + ').<br>' +
+          'Frist: <b>' + esc(fmtTid(r.frist)) + '</b>.<br><br><span class="muted small">Skann neste par, eller gå tilbake til oversikten.</span>');
+      }
+      store.set('meg', { navn: v.navn, telefon: v.telefon, type: v.type, butikk: v.butikk, epost: v.epost });
+      aktivtLan(r.ski, r.utlevert, r.frist, v.telefon, true, r.type);
+    } catch (ex) { err.textContent = ex.message; btn.disabled = false; btn.textContent = 'Lån skiene'; }
+  };
+}
+
+/* Aktivt lån: nedtelling + lever tilbake */
+let nedtelling = null;
+function varighet(ms){
+  const min = Math.max(0, Math.round(Math.abs(ms) / 60000));
+  if (min < 100) return min + ' min';
+  if (min < 48 * 60) return Math.floor(min / 60) + ' t' + (min % 60 ? ' ' + (min % 60) + ' min' : '');
+  return Math.round(min / 1440) + ' dager';
+}
+
+function aktivtLan(ski, utlevert, frist, tlf, nytt, type){
+  const demo = type === 'Skidemo';
+  const tekstIgjen = demo ? 'Ta ' + DEMO.tekst + ' – tid igjen' : 'Du kan teste skiene i';
+  clearInterval(nedtelling);
+  vis(
+    (nytt ? '<div class="card okbanner"><span class="ico-s">✓</span><div><b>Utlånet er registrert.</b><br>Kos deg i bakken!</div></div>' : '') +
+    skiKort(ski, '<span class="pill warn">Lånt av deg</span>') +
+    '<div class="card timer" id="timer">' +
+      '<div class="tlabel" id="tlabel">' + esc(tekstIgjen) + '</div>' +
+      '<div class="tid" id="tid"></div>' +
+      '<div class="prog"><i id="prog"></i></div>' +
+      '<div class="tider"><div>Hentet<br><b>' + esc(fmtTid(utlevert)) + '</b></div>' +
+      '<div style="text-align:right">Lever innen<br><b>' + esc(fmtTid(frist)) + '</b></div></div>' +
+    '</div>' +
+    '<div class="card"><button class="btn ok big" id="lever">Lever tilbake</button>' +
+    '<p class="small muted" style="margin:10px 0 0">Trykk når du har levert skiene. Lukker du siden, skanner du bare QR-koden på skiene igjen.</p>' +
+    '<p class="err" id="err"></p></div>' + tilbakeLenke()
+  );
+  kobleTilbake();
+  document.getElementById('lever').onclick = ev => lever(ski, tlf, ev.target);
+
+  const f = new Date(frist).getTime(), u = new Date(utlevert).getTime();
+  const oppdater = () => {
+    const el = document.getElementById('tid');
+    if (!el) return clearInterval(nedtelling);
+    const igjen = f - Date.now(), over = igjen < 0;
+    el.textContent = over ? varighet(igjen) + ' over' : varighet(igjen);
+    document.getElementById('tlabel').textContent = over ? (demo ? 'Tiden er ute – lever skiene på standen' : 'Fristen er passert – lever så snart du kan') : tekstIgjen;
+    document.getElementById('timer').classList.toggle('over', over);
+    document.getElementById('timer').classList.toggle('snart', !over && igjen < 30 * 60000);
+    document.getElementById('prog').style.width = Math.min(100, Math.max(2, (Date.now() - u) / Math.max(1, f - u) * 100)).toFixed(1) + '%';
+  };
+  oppdater();
+  nedtelling = setInterval(oppdater, 15000);
+}
+
+async function lever(ski, tlf, btn){
+  const err = document.getElementById('err');
+  btn.disabled = true; btn.textContent = 'Registrerer …';
+  try {
+    await api('leverTilbake', ski.id, tlf);
+    ferdig('Takk!', '<b>' + esc(ski.navn) + '</b> er levert tilbake.<br><br><span class="muted small">Vil du teste et nytt par? Skann QR-koden på neste ski.</span>');
+  } catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = 'Lever tilbake'; }
+}
+
+function ferdig(tittel, tekst){
+  vis('<div class="card done"><div class="ico">✓</div><h1>' + esc(tittel) + '</h1><p>' + tekst + '</p>' +
+    '<button class="btn primary big" data-skann style="margin-top:8px">📷 Skann neste par</button></div>' + tilbakeLenke());
+  kobleTilbake();
+}
+
+/* ---------- ADMIN ---------- */
+let ADM = null, fane = 'ute', sok = '', skiSok = '', skiMelding = '', sistLagtTil = [], skiMeny = null, visInaktive = false;
+let qrValg = 'nye', qrIds = [], qrAv = {}, qrSporsmal = false, qrFormat = 'ark', qrStart = 1;
+const modellNavn = x => [x.merke, x.modell].filter(Boolean).join(' ');
+function qrUtvalg(){
+  const aktive = ADM.ski.filter(x => x.aktiv);
+  if (qrValg === 'alle') return aktive;
+  if (qrValg === 'ids') { const m = {}; qrIds.forEach(i => m[String(i).toLowerCase()] = 1); return aktive.filter(x => m[x.id.toLowerCase()]); }
+  if (qrValg.indexOf('m:') === 0) return aktive.filter(x => modellNavn(x).toLowerCase() === qrValg.slice(2));
+  return aktive.filter(x => !x.qr);
+}
+function visQr(ider){ qrValg = 'ids'; qrIds = ider.slice(); qrAv = {}; qrSporsmal = false; fane = 'qr'; tegnAdmin(); window.scrollTo(0, 0); }
+
+function visAdmin(){
+  app.className = 'wide';
+  qrFormat = store.get('qrFormat', 'ark');
+  if (['ark', 'etikett'].indexOf(qrFormat) < 0) qrFormat = 'ark';
+  const pin = sess.get('pin');
+  if (!pin) return pinSide();
+  laster();
+  api('adminData', pin).then(d => { ADM = d; tegnAdmin(); startAuto(); })
+    .catch(e => { sess.del('pin'); pinSide(e.message); });
+}
+
+/* Automatisk oppdatering av oversikten hvert 30. sekund */
+let autoTimer = null;
+function startAuto(){
+  clearInterval(autoTimer);
+  autoTimer = setInterval(async () => {
+    if (!ADM || app.className !== 'wide' || document.hidden || ['ute', 'ski'].indexOf(fane) < 0) return;
+    const a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;           // ikke forstyrr noen som skriver
+    if (skiMeny || app.querySelector('details[open]:not(#inaktivBoks), [data-sikker="1"], button:disabled')) return;
+    try {
+      const d = await api('adminData', sess.get('pin'));
+      if (JSON.stringify(d) !== JSON.stringify(ADM)) { const y = window.scrollY; ADM = d; tegnAdmin(); window.scrollTo(0, y); }
+    } catch (e) {}
+  }, 30000);
+}
+
+function pinSide(msg){
+  app.className = '';
+  vis('<form class="card" id="pf" style="margin-top:30px"><h2>Ansatt-innlogging</h2>' +
+    '<label>Din PIN-kode<input type="password" name="pin" inputmode="numeric" autocomplete="current-password" required></label>' +
+    '<button class="btn primary big">Logg inn</button><p class="err">' + esc(msg || '') + '</p></form>' +
+    '<p style="text-align:center"><button class="btn link" id="kunde">← Til kundesiden</button></p>');
+  document.getElementById('pf').onsubmit = e => { e.preventDefault(); sess.set('pin', e.target.pin.value); visAdmin(); };
+  document.getElementById('kunde').onclick = visStart;
+}
+
+function statusFor(l){
+  const f = new Date(l.frist), n = new Date();
+  if (f < n) return 'over';
+  if (dagStart(f).getTime() === dagStart(n).getTime()) return 'today';
+  return '';
+}
+
+const erAdmin = () => !!(ADM && ADM.bruker && ADM.bruker.rolle === 'Admin');
+function faner(){
+  return erAdmin()
+    ? [['ute', 'Utlånt'], ['ski', 'Ski'], ['qr', 'QR'], ['stat', 'Statistikk'], ['ans', 'Ansatte']]
+    : [['ute', 'Utlånt'], ['ski', 'Alle ski']];
+}
+
+function tegnAdmin(){
+  if (!faner().some(t => t[0] === fane)) fane = 'ute';
+  document.getElementById('topright').textContent = ADM.bruker.navn + ' · ' + ADM.bruker.rolle + (PREVIEW ? ' · eksempeldata' : '');
+  const lan = ADM.lan.slice().sort((a, b) => new Date(a.frist) - new Date(b.frist));
+  const over = lan.filter(l => statusFor(l) === 'over').length;
+  const ledige = ADM.ski.filter(s => s.aktiv && !s.utlant).length;
+
+  let html =
+    '<button class="btn primary big skannknapp noprint" data-skann>📷 Skann ski</button>' +
+    '<div class="stats"><div class="stat"><b>' + lan.length + '</b><span>UTE NÅ</span></div>' +
+    '<div class="stat' + (over ? ' bad' : '') + '"><b>' + over + '</b><span>OVER FRIST</span></div>' +
+    '<div class="stat"><b>' + ledige + '</b><span>LEDIGE</span></div></div>' +
+    '<div class="tabs">' + faner().map(t => '<button data-f="' + t[0] + '"' + (fane === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>').join('') + '</div>';
+
+  if (fane === 'stat') html += STAT ? statHtml() : '<div class="spinner"></div>';
+
+  if (fane === 'ute') {
+    html += '<div class="noprint" style="margin-bottom:12px"><input type="search" id="sok" placeholder="Søk navn, ski, butikk …" value="' + esc(sok) + '"></div>';
+    const q = sok.toLowerCase();
+    const vist = lan.filter(l => !q || [l.navn, l.ski, l.skiId, l.butikk, l.telefon, l.type].join(' ').toLowerCase().indexOf(q) >= 0);
+    if (!vist.length) html += '<div class="card muted">' + (lan.length ? 'Ingen treff.' : 'Ingen ski er ute akkurat nå.') + '</div>';
+    vist.forEach(l => {
+      const st = statusFor(l);
+      const pill = st === 'over' ? '<span class="pill bad">Over frist</span>' : st === 'today' ? '<span class="pill warn">Frist i dag</span>' : '<span class="pill grey">' + esc(l.type) + '</span>';
+      html += '<div class="card loan ' + st + '"><div class="head"><div><div class="small muted">' + esc(l.skiId) + ' · ' + esc(l.ski) + '</div>' +
+        '<div class="who">' + esc(l.navn) + '</div></div>' + pill + '</div>' +
+        '<div class="small muted">' + esc(l.type) + (l.butikk ? ' · ' + esc(l.butikk) : '') + ' · ute siden ' + esc(fmtTid(l.utlevert)) + '<br>' +
+        'Frist: <b style="color:var(--ink)">' + esc(fmtTid(l.frist)) + '</b><br>Tlf. ' + esc(l.telefon) + (l.epost ? ' · ' + esc(l.epost) : '') + '</div>' +
+        '<div class="acts"><a class="btn" target="_blank" href="tel:' + esc(l.telefon) + '">Ring</a>' +
+        '<a class="btn" target="_blank" href="sms:' + esc(l.telefon) + '">SMS</a>' +
+        '<button class="btn ok" data-mottatt="' + esc(l.id) + '">Mottatt</button></div></div>';
+    });
+  }
+
+  if (fane === 'ski') {
+    if (erAdmin()) {
+      const unik = f => Array.from(new Set(ADM.ski.map(f).filter(Boolean)));
+      html += '<details class="card noprint"' + (skiMelding ? ' open' : '') + '><summary>+ Legg til ski</summary><form id="ny" style="margin-top:14px">' +
+        '<datalist id="dlMerke">' + unik(x => x.merke).map(v => '<option value="' + esc(v) + '">').join('') + '</datalist>' +
+        '<datalist id="dlModell">' + unik(x => x.modell).map(v => '<option value="' + esc(v) + '">').join('') + '</datalist>' +
+        '<div class="row"><label>Merke <span class="opt">(valgfritt)</span><input type="text" name="merke" list="dlMerke" autocomplete="off"></label>' +
+        '<label>Modell<input type="text" name="modell" list="dlModell" autocomplete="off" placeholder="Peregrine 80" required></label></div>' +
+        '<label>Lengder i cm<input type="text" name="lengder" inputmode="decimal" placeholder="162, 167, 172, 177, 182" required></label>' +
+        '<p class="small muted" style="margin:-4px 0 12px">Én ski per lengde. Har dere to par i samme lengde, skriv lengden to ganger. ' +
+        'Velg en eksisterende modell fra listen for å legge til flere lengder i den.</p>' +
+        '<details style="margin-bottom:12px"><summary class="small" style="font-weight:600;color:var(--muted)">Egen ID (valgfritt)</summary>' +
+        '<label style="margin-top:8px">ID <span class="opt">(bare når du legger inn én lengde)</span><input type="text" name="id"></label></details>' +
+        '<button class="btn primary">Legg til</button>' +
+        (skiMelding ? '<p style="color:var(--ok);font-weight:600;margin:10px 0 0">' + esc(skiMelding) + '</p>' +
+          '<button type="button" class="btn ok" style="margin-top:8px" data-qrider="' + esc(sistLagtTil.join(',')) + '">🖨 Skriv ut QR for disse</button>' : '') +
+        '<p class="err" id="nyErr"></p></form>' +
+        '<p class="small muted" style="margin-bottom:0">Du kan også legge inn og endre ski direkte i arket «Ski». Skriv «Nei» i kolonnen Aktiv for å ta et par ut av utlån. ' +
+        'Menyen Demoski → «Sorter ski» i regnearket sorterer arket.</p></details>';
+      html += importHtml();
+    }
+    html += '<div class="noprint" style="margin-bottom:12px"><input type="search" id="skisok" placeholder="Søk modell, lengde eller ID …" value="' + esc(skiSok) + '"></div>';
+    const q = skiSok.trim().toLowerCase();
+    const vist = ADM.ski.filter(x => !q || [x.merke, x.modell, x.lengde, x.id, x.navn].join(' ').toLowerCase().indexOf(q) >= 0);
+    if (!ADM.ski.length) html += '<div class="card muted">Ingen ski registrert ennå.</div>';
+    else if (!vist.length) html += '<div class="card muted">Ingen treff.</div>';
+    // grupper per modell (listen kommer ferdig sortert på modell og lengde). Ski som er tatt ut av demo vises for seg nederst.
+    const grupper = [];
+    vist.filter(x => x.aktiv).forEach(x => {
+      const navn = modellNavn(x);
+      const g = grupper[grupper.length - 1];
+      if (g && g.nokkel === navn.toLowerCase()) g.ski.push(x); else grupper.push({ nokkel: navn.toLowerCase(), navn: navn, ski: [x] });
+    });
+    const bekreft = (attr, verdi, tekst, klasse) => '<button class="btn ' + (klasse || '') + '" ' + attr + '="' + esc(verdi) + '">' + tekst + '</button>';
+    grupper.forEach(g => {
+      const ute = g.ski.filter(x => x.utlant).length, ledig = g.ski.length - ute;
+      const gMeny = skiMeny === 'm:' + g.nokkel;
+      html += '<div class="card skilist"><div class="grp"><div class="row" style="align-items:flex-start"><div><h2 style="margin:0">' + esc(g.navn) + '</h2>' +
+        '<div class="small muted">' + g.ski.length + ' par · ' + ledig + ' ledige' + (ute ? ' · ' + ute + ' ute' : '') + '</div></div>' +
+        (erAdmin() ? '<button class="btn meny-knapp" data-meny="m:' + esc(g.nokkel) + '" aria-label="Valg for modellen">⋯</button>' : '') + '</div>' +
+        (gMeny ? '<div class="meny">' +
+          bekreft('data-qrider', g.ski.map(x => x.id).join(','), '🖨 QR for hele modellen') +
+          bekreft('data-tautmodell', g.ski.map(x => x.id).join(','), 'Ta hele modellen ut av demo', 'farlig') +
+          (ute ? '<div class="small" style="color:var(--warn);flex-basis:100%">' + ute + ' par er utlånt nå. De blir stående som utlånt til de er levert.</div>' : '') +
+        '</div>' : '') + '</div>';
+      g.ski.forEach(x => {
+        const dot = x.utlant ? 'out' : 'ok';
+        const meny = skiMeny === x.id;
+        html += '<div class="item"><span class="dot ' + dot + '"></span><div class="grow"><div><b>' + esc(lengdeTekst(x.lengde)) + '</b></div>' +
+          '<div class="id">Nr. ' + esc(x.id) + ' · ' + (x.utlant ? 'Utlånt' : 'Ledig') + (erAdmin() && !x.qr ? ' · <span style="color:var(--warn)">mangler QR</span>' : '') + '</div></div>' +
+          (x.utlant
+            ? (l => l ? '<button class="btn ok" data-mottatt="' + esc(l.id) + '">Mottatt</button>' : '')(ADM.lan.find(y => y.skiId === x.id))
+            : '<button class="btn" data-apne="' + esc(x.id) + '">Lån ut</button>') +
+          (erAdmin() ? '<button class="btn meny-knapp" data-meny="' + esc(x.id) + '" aria-label="Flere valg">⋯</button>' : '') + '</div>';
+        if (meny) html += '<div class="meny">' + bekreft('data-qrski', x.id, '🖨 Skriv ut QR') +
+          bekreft('data-tautski', x.id, 'Ta ut av demo', 'farlig') + '</div>';
+      });
+      html += '</div>';
+    });
+    // ski som ikke er i demo lenger
+    const inaktive = vist.filter(x => !x.aktiv);
+    if (erAdmin() && inaktive.length) {
+      html += '<details class="card skilist"' + (visInaktive ? ' open' : '') + ' id="inaktivBoks"><summary>Ikke i demo lenger (' + inaktive.length + ')</summary>' +
+        '<p class="small muted" style="margin:8px 0 4px">Disse kan ikke lånes og vises ikke for kunder eller ansatte. Historikk og statistikk er beholdt.</p>';
+      inaktive.forEach(x => {
+        html += '<div class="item"><span class="dot off"></span><div class="grow"><div><b>' + esc(modellNavn(x)) + ' · ' + esc(lengdeTekst(x.lengde)) + '</b></div>' +
+          '<div class="id">Nr. ' + esc(x.id) + '</div></div>' + bekreft('data-tainn', x.id, 'Ta inn igjen') + '</div>';
+      });
+      html += '</details>';
+    }
+  }
+
+  if (fane === 'qr') {
+    const aktive = ADM.ski.filter(x => x.aktiv);
+    const utvalg = qrUtvalg();
+    const med = utvalg.filter(x => !qrAv[x.id]);
+    const modeller = [];
+    aktive.forEach(x => { const n = modellNavn(x); if (modeller.indexOf(n) < 0) modeller.push(n); });
+    const nyeAnt = aktive.filter(x => !x.qr).length;
+    const segKnapp = (v, t) => '<button data-qrvalg="' + esc(v) + '"' + (qrValg === v ? ' class="on"' : '') + '>' + t + '</button>';
+    html += '<div class="card noprint"><h2>QR-etiketter</h2>' +
+      '<div class="seg">' + segKnapp('nye', 'Ikke skrevet ut (' + nyeAnt + ')') + segKnapp('alle', 'Alle (' + aktive.length + ')') + '</div>' +
+      '<select id="qrModell" class="velg"><option value="">Velg én modell …</option>' +
+        modeller.map(n => '<option value="m:' + esc(n.toLowerCase()) + '"' + (qrValg === 'm:' + n.toLowerCase() ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>' +
+      (qrValg === 'ids' ? '<div class="note" style="margin:12px 0 0">Viser ' + utvalg.length + ' valgte par.</div>' : '') +
+      '<div style="margin-top:14px"><div class="small" style="font-weight:600;margin-bottom:6px">Skriver</div><div class="seg" style="margin:0">' +
+        '<button data-qrformat="ark"' + (qrFormat === 'ark' ? ' class="on"' : '') + '>A4-ark liggende, 24 etiketter</button>' +
+        '<button data-qrformat="etikett"' + (qrFormat === 'etikett' ? ' class="on"' : '') + '>Etikettskriver</button></div>' +
+        '<p class="small muted" style="margin:8px 0 0">Lapp: 33,9 mm bred × 63,5 mm høy. ' + (qrFormat === 'ark' ? 'A4 skrives ut liggende, 8 × 3 lapper per ark.' : 'Én lapp per side.') + '</p>' +
+        (qrFormat === 'ark' ? '<label style="margin:12px 0 0">Start på etikett nr. <span class="opt">(1–24: 1 = øverst til venstre, teller bortover 8 per rad – for ark som er delvis brukt)</span>' +
+          '<input type="number" id="qrStart" min="1" max="24" inputmode="numeric" value="' + qrStart + '" style="max-width:120px"></label>' : '') +
+        '</div>' +
+      '<button class="btn primary big" id="print" style="margin-top:16px"' + (med.length ? '' : ' disabled') + '>🖨 Skriv ut ' + med.length + ' etikett' + (med.length === 1 ? '' : 'er') + '</button>' +
+      (qrSporsmal ? '<div class="note" style="margin:12px 0 0;color:var(--ink)"><b>Ble etikettene skrevet ut?</b><br>Da merkes de, og forsvinner fra «Ikke skrevet ut».' +
+        '<div class="row" style="margin-top:10px"><button class="btn" id="qrNei">Nei</button><button class="btn ok" id="qrJa">Ja, merk dem</button></div></div>' : '') +
+      '<p class="small muted" style="margin:12px 0 0">' + (utvalg.length ? 'Trykk på en etikett for å ta den ut av utskriften. ' : 'Ingen par å vise her. ') +
+      'Fest koden på skien med klar tape eller et laminert klistremerke.</p>' +
+      '<p class="small muted" style="margin:8px 0 0">Admin-lenke (bokmerk denne): ' + esc(ADM.url) + '?admin</p></div>';
+    // samme stående lapp (33,9 × 63,5 mm) for både A4-ark og etikettskriver
+    const lapp = (x, ekstra) => '<div class="pl etikett' + (ekstra || '') + '"' + (ekstra !== undefined ? ' data-qrid="' + esc(x.id) + '"' : '') + '>' +
+      '<div class="firma">' + esc(FIRMA) + '</div>' +
+      '<div class="qr" data-url="' + esc(ADM.url + '?ski=' + encodeURIComponent(x.id)) + '"></div><div class="lt">' +
+        '<div class="modell">' + esc(modellNavn(x)) + '</div>' +
+        '<div class="len">' + esc(lengdeTekst(x.lengde)) + '</div>' +
+        '<div class="nrboks"><small>NR.</small><b>' + esc(x.id) + '</b></div>' +
+      '</div>' +
+      '<div class="bunn">Skann QR – eller oppgi nr.</div></div>';
+    // forhåndsvisning i faktisk størrelse (trykk for å velge bort)
+    html += '<div class="forh noprint">';
+    utvalg.forEach(x => { html += lapp(x, qrAv[x.id] ? ' av' : ''); });
+    html += '</div>';
+    // utskrift (bare valgte), plassert på side/ark
+    html += '<div class="utskrift ' + qrFormat + '">';
+    if (qrFormat === 'ark') {
+      const plasser = [];
+      for (let i = 1; i < qrStart; i++) plasser.push(null);
+      med.forEach(x => plasser.push(x));
+      for (let i = 0; i < plasser.length; i += 24) {
+        html += '<div class="side">' + plasser.slice(i, i + 24).map(x => x ? lapp(x) : '<div class="pl etikett tom"></div>').join('') + '</div>';
+      }
+    } else {
+      med.forEach(x => { html += lapp(x); });
+    }
+    html += '</div>';
+  }
+
+  if (fane === 'ans') {
+    html += '<div class="card"><h2>Ansatte</h2>' +
+      '<p class="small muted" style="margin-top:-6px">Ansatt: kan låne ut og ta imot ski. Admin: har også tilgang til statistikk, QR-koder, nye ski og ansatte.</p><div class="skilist">';
+    if (!(ADM.ansatte || []).length) html += '<p class="muted">Ingen ansatte lagt inn ennå.</p>';
+    (ADM.ansatte || []).forEach(a => {
+      html += '<div class="item"><span class="dot ' + (a.aktiv ? 'ok' : 'off') + '"></span><div class="grow"><b>' + esc(a.navn) + '</b>' +
+        '<div class="id">' + esc(a.rolle) + (a.aktiv ? '' : ' · deaktivert') + '</div></div>' +
+        '<button class="btn" data-rad="' + a.rad + '" data-navn="' + esc(a.navn) + '" data-aktiv="' + (a.aktiv ? '0' : '1') + '">' + (a.aktiv ? 'Deaktiver' : 'Aktiver') + '</button></div>';
+    });
+    html += '</div></div>' +
+      '<form class="card" id="nyAns"><h2>Ny ansatt</h2>' +
+      '<div class="row"><label>Navn<input type="text" name="navn" autocomplete="off" required></label>' +
+      '<label>PIN-kode<input type="text" name="pin" inputmode="numeric" autocomplete="off" placeholder="4–8 siffer" required></label></div>' +
+      '<fieldset><legend>Rolle</legend><div class="chips">' +
+        '<label><input type="radio" name="rolle" value="Ansatt" checked><span>Ansatt (inn/ut)</span></label>' +
+        '<label><input type="radio" name="rolle" value="Admin"><span>Admin</span></label></div></fieldset>' +
+      '<button class="btn primary">Legg til</button><p class="err" id="ansErr"></p>' +
+      '<p class="small muted" style="margin-bottom:0">Gi PIN-koden til den ansatte. PIN-koder kan endres i arket «Ansatte». ' +
+      'Hoved-PIN-koden ligger i Skriptegenskaper.</p></form>';
+  }
+
+  html += '<p style="text-align:center" class="noprint"><button class="btn link" id="ut">Logg ut</button></p>';
+  vis(html);
+
+  app.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+    fane = b.dataset.f;
+    if (fane === 'stat') STAT = null; // hent ferske tall hver gang fanen åpnes
+    tegnAdmin();
+  });
+  if (fane === 'stat' && !STAT) hentStat();
+  app.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { statPer = b.dataset.per; tegnAdmin(); });
+  app.querySelectorAll('[data-typ]').forEach(b => b.onclick = () => { statType = b.dataset.typ; tegnAdmin(); });
+  app.querySelectorAll('[data-modell]').forEach(b => b.onclick = () => { statApen = statApen === b.dataset.modell ? null : b.dataset.modell; tegnAdmin(); });
+  const kopi = document.getElementById('kopier');
+  if (kopi) kopi.onclick = async () => {
+    const tekst = kopi.dataset.csv;
+    try { await navigator.clipboard.writeText(tekst); kopi.textContent = 'Kopiert ✓'; }
+    catch (e) {
+      const t = document.getElementById('csvBoks');
+      t.hidden = false; t.value = tekst; t.select();
+    }
+  };
+  const ut = document.getElementById('ut');
+  ut.onclick = () => { sess.del('pin'); ADM = null; clearInterval(autoTimer); document.getElementById('topright').textContent = PREVIEW ? 'eksempeldata' : ''; visStart(); };
+
+  app.querySelectorAll('[data-rad]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { ADM = await api('adminAnsattAktiv', sess.get('pin'), +b.dataset.rad, b.dataset.navn, b.dataset.aktiv === '1'); tegnAdmin(); }
+    catch (e) { b.disabled = false; alertBox(e.message); }
+  });
+  const nyAns = document.getElementById('nyAns');
+  if (nyAns) nyAns.onsubmit = async e => {
+    e.preventDefault();
+    const knapp = nyAns.querySelector('button'); knapp.disabled = true;
+    try {
+      ADM = await api('adminNyAnsatt', sess.get('pin'), { navn: nyAns.navn.value, pin: nyAns.pin.value, rolle: nyAns.querySelector('input[name=rolle]:checked').value });
+      tegnAdmin();
+    } catch (ex) { document.getElementById('ansErr').textContent = ex.message; knapp.disabled = false; }
+  };
+
+  const s = document.getElementById('sok');
+  if (s) s.oninput = () => { sok = s.value; const pos = s.selectionStart; tegnAdmin(); const n = document.getElementById('sok'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} };
+
+  app.querySelectorAll('[data-mottatt]').forEach(b => b.onclick = async () => {
+    if (b.dataset.sikker !== '1') { b.dataset.sikker = '1'; b.textContent = 'Bekreft?'; b.classList.add('danger'); return; }
+    b.disabled = true; b.textContent = '…';
+    try { ADM = await api('adminMottatt', sess.get('pin'), b.dataset.mottatt); tegnAdmin(); }
+    catch (e) { b.disabled = false; b.textContent = 'Mottatt'; alertBox(e.message); }
+  });
+
+  app.querySelectorAll('[data-apne]').forEach(b => b.onclick = () => { fraAdmin = true; visSki(b.dataset.apne); });
+
+  const ny = document.getElementById('ny');
+  if (ny) ny.onsubmit = async e => {
+    e.preventDefault();
+    const knapp = ny.querySelector('button.primary'); knapp.disabled = true;
+    try {
+      const modell = ny.modell.value.trim();
+      ADM = await api('adminNySki', sess.get('pin'), { merke: ny.merke.value, modell: modell, lengder: ny.lengder.value, id: ny.id.value });
+      const ids = ADM.lagtTil || [];
+      sistLagtTil = ids;
+      skiMelding = 'La til ' + ids.length + ' par av ' + modell + ' (ID ' + (ids.length > 1 ? ids[0] + '–' + ids[ids.length - 1] : ids[0]) + ').';
+      tegnAdmin();
+      skiMelding = '';
+    } catch (ex) { document.getElementById('nyErr').textContent = ex.message; knapp.disabled = false; }
+  };
+  kobleImport();
+  const ss = document.getElementById('skisok');
+  if (ss) ss.oninput = () => { skiSok = ss.value; const pos = ss.selectionStart; tegnAdmin(); const n = document.getElementById('skisok'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} };
+
+  const pr = document.getElementById('print');
+  if (pr) pr.onclick = () => {
+    let st = document.getElementById('printStil');
+    if (!st) { st = document.createElement('style'); st.id = 'printStil'; document.head.appendChild(st); }
+    st.textContent = qrFormat === 'etikett'
+      ? '@media print{@page{size:33.9mm 63.5mm;margin:0}}'
+      : '@media print{@page{size:A4 landscape;margin:0}}';
+    try { window.print(); } catch (e) {}
+    qrSporsmal = true; tegnAdmin();
+  };
+  app.querySelectorAll('[data-qrvalg]').forEach(b => b.onclick = () => { qrValg = b.dataset.qrvalg; qrAv = {}; qrSporsmal = false; tegnAdmin(); });
+  const qm = document.getElementById('qrModell');
+  if (qm) qm.onchange = () => { if (qm.value) { qrValg = qm.value; qrAv = {}; qrSporsmal = false; tegnAdmin(); } };
+  const qs = document.getElementById('qrStart');
+  if (qs) qs.onchange = () => { qrStart = Math.min(24, Math.max(1, parseInt(qs.value, 10) || 1)); tegnAdmin(); };
+  app.querySelectorAll('[data-qrformat]').forEach(b => b.onclick = () => { qrFormat = b.dataset.qrformat; store.set('qrFormat', qrFormat); tegnAdmin(); });
+  app.querySelectorAll('.forh .pl[data-qrid]').forEach(el => el.onclick = () => {
+    const id = el.dataset.qrid; if (qrAv[id]) delete qrAv[id]; else qrAv[id] = 1; tegnAdmin();
+  });
+  const qrNei = document.getElementById('qrNei');
+  if (qrNei) qrNei.onclick = () => { qrSporsmal = false; tegnAdmin(); };
+  const qrJa = document.getElementById('qrJa');
+  if (qrJa) qrJa.onclick = async () => {
+    qrJa.disabled = true; qrJa.textContent = 'Lagrer …';
+    const ider = qrUtvalg().filter(x => !qrAv[x.id]).map(x => x.id);
+    try { ADM = await api('adminMerkUtskrevet', sess.get('pin'), ider); qrSporsmal = false; qrAv = {}; if (qrValg === 'ids') qrValg = 'nye'; tegnAdmin(); }
+    catch (e) { alertBox(e.message); qrJa.disabled = false; qrJa.textContent = 'Ja, merk dem'; }
+  };
+  app.querySelectorAll('[data-meny]').forEach(b => b.onclick = () => { skiMeny = skiMeny === b.dataset.meny ? null : b.dataset.meny; tegnAdmin(); });
+  const settAktiv = (knapp, ider, aktiv) => async () => {
+    if (!aktiv && knapp.dataset.sikker !== '1') {
+      knapp.dataset.sikker = '1'; knapp.textContent = 'Bekreft – ta ut ' + ider.length + ' par'; return;
+    }
+    knapp.disabled = true; knapp.textContent = '…';
+    try { ADM = await api('adminSettAktiv', sess.get('pin'), ider, aktiv); skiMeny = null; tegnAdmin(); }
+    catch (e) { alertBox(e.message); knapp.disabled = false; }
+  };
+  app.querySelectorAll('[data-tautski]').forEach(b => b.onclick = settAktiv(b, [b.dataset.tautski], false));
+  app.querySelectorAll('[data-tautmodell]').forEach(b => b.onclick = settAktiv(b, b.dataset.tautmodell.split(','), false));
+  app.querySelectorAll('[data-tainn]').forEach(b => b.onclick = settAktiv(b, [b.dataset.tainn], true));
+  const ib = document.getElementById('inaktivBoks');
+  if (ib) ib.ontoggle = () => { visInaktive = ib.open; };
+  app.querySelectorAll('[data-qrski]').forEach(b => b.onclick = () => visQr([b.dataset.qrski]));
+  app.querySelectorAll('[data-qrider]').forEach(b => b.onclick = () => visQr(b.dataset.qrider.split(',')));
+
+  app.querySelectorAll('.qr[data-url]').forEach(el => {
+    if (window.QRCode) {
+      try { new QRCode(el, { text: el.dataset.url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M }); return; } catch (e) {}
+    }
+    el.innerHTML = '<span class="small muted" style="word-break:break-all">' + esc(el.dataset.url) + '</span>';
+  });
+}
+
+/* ---------- STATISTIKK ---------- */
+let STAT = null, statPer = 'sesong', statType = 'Alle', statApen = null;
+
+let statLaster = false;
+function hentStat(){
+  if (statLaster) return;
+  statLaster = true;
+  api('adminStatistikk', sess.get('pin'))
+    .finally(() => { statLaster = false; })
+    .then(d => { STAT = d; if (fane === 'stat') tegnAdmin(); })
+    .catch(e => { STAT = []; alertBox(e.message); if (fane === 'stat') tegnAdmin(); });
+}
+
+const lengdeTekst = l => !l || l === '?' ? 'Ukjent' : (/^\d+$/.test(l) ? l + ' cm' : l);
+const lengdeSort = (a, b) => (parseFloat(a) || 9999) - (parseFloat(b) || 9999) || String(a).localeCompare(b);
+
+function statHtml(){
+  const n = new Date();
+  let fra = 0;
+  if (statPer === '30') fra = n.getTime() - 30 * DAG;
+  if (statPer === 'sesong') fra = new Date(n.getMonth() >= 7 ? n.getFullYear() : n.getFullYear() - 1, 7, 1).getTime();
+  if (statPer === 'aar') fra = new Date(n.getFullYear(), 0, 1).getTime();
+
+  const rader = STAT.filter(r => new Date(r.u).getTime() >= fra && (statType === 'Alle' || r.t === statType));
+  const mod = {}, len = {}, kunder = {};
+  let tid = 0, tidN = 0;
+  rader.forEach(r => {
+    const l = r.l || '?';
+    const m = mod[r.m] || (mod[r.m] = { n: 0, l: {} });
+    m.n++; m.l[l] = (m.l[l] || 0) + 1;
+    len[l] = (len[l] || 0) + 1;
+    if (r.k) kunder[r.k] = 1;
+    if (r.r) { tid += new Date(r.r) - new Date(r.u); tidN++; }
+  });
+  const modeller = Object.keys(mod).sort((a, b) => mod[b].n - mod[a].n || a.localeCompare(b));
+  const lengder = Object.keys(len).sort(lengdeSort);
+  const maxM = Math.max(1, ...modeller.map(m => mod[m].n));
+  const maxL = Math.max(1, ...lengder.map(l => len[l]));
+  let snitt = '–';
+  if (tidN) { const t = tid / tidN / 3600e3; snitt = t < 48 ? (Math.round(t * 10) / 10).toLocaleString('nb-NO') + ' t' : Math.round(t / 24) + ' d'; }
+
+  const knapp = (attr, v, txt, aktiv) => '<button ' + attr + '="' + v + '"' + (aktiv ? ' class="on"' : '') + '>' + txt + '</button>';
+  const bar = (label, v, max, attr) =>
+    '<div class="bar"' + (attr || '') + '><div class="bl">' + label + '</div><div class="bt"><i style="width:' + (v / max * 100).toFixed(1) + '%"></i></div><div class="bn">' + v + '</div></div>';
+
+  let h = '<div class="card noprint"><div class="seg">' +
+    knapp('data-per', '30', 'Siste 30 dager', statPer === '30') + knapp('data-per', 'sesong', 'Denne sesongen', statPer === 'sesong') +
+    knapp('data-per', 'aar', 'I år', statPer === 'aar') + knapp('data-per', 'alt', 'Alt', statPer === 'alt') + '</div><div class="seg" style="margin:0">' +
+    ['Alle', 'Skidemo', 'Bekjent', 'Butikkansatt'].map(t => knapp('data-typ', t, t, statType === t)).join('') + '</div></div>';
+
+  h += '<div class="stats"><div class="stat"><b>' + rader.length + '</b><span>UTLÅN</span></div>' +
+    '<div class="stat"><b>' + Object.keys(kunder).length + '</b><span>KUNDER</span></div>' +
+    '<div class="stat"><b>' + snitt + '</b><span>SNITT LÅNETID</span></div></div>';
+
+  if (!rader.length) return h + '<div class="card muted">Ingen utlån i valgt periode.</div>';
+
+  h += '<div class="card"><h2>Per modell</h2><p class="small muted" style="margin-top:-6px">Trykk på en modell for å se fordelingen på lengder.</p>';
+  modeller.forEach(m => {
+    const apen = statApen === m;
+    h += bar((apen ? '▾ ' : '▸ ') + esc(m), mod[m].n, maxM, ' data-modell="' + esc(m) + '" style="cursor:pointer"');
+    if (apen) {
+      const ml = Object.keys(mod[m].l).sort(lengdeSort), mx = Math.max(...ml.map(l => mod[m].l[l]));
+      h += '<div class="sub">' + ml.map(l => bar(esc(lengdeTekst(l)), mod[m].l[l], mx)).join('') + '</div>';
+    }
+  });
+  h += '</div>';
+
+  h += '<div class="card"><h2>Per lengde</h2>' + lengder.map(l => bar(esc(lengdeTekst(l)), len[l], maxL)).join('') + '</div>';
+
+  // Modell × lengde
+  const maxC = Math.max(...modeller.map(m => Math.max(...Object.values(mod[m].l))));
+  h += '<div class="card"><h2>Modell × lengde</h2><div class="mxwrap"><table class="mx"><thead><tr><th></th>' +
+    lengder.map(l => '<th>' + esc(l === '?' ? '?' : l) + '</th>').join('') + '<th>Sum</th></tr></thead><tbody>';
+  modeller.forEach(m => {
+    h += '<tr><th>' + esc(m) + '</th>' + lengder.map(l => {
+      const v = mod[m].l[l] || 0;
+      return '<td style="background:rgba(11,95,255,' + (v ? (0.08 + 0.5 * v / maxC).toFixed(2) : 0) + ')">' + (v || '·') + '</td>';
+    }).join('') + '<td><b>' + mod[m].n + '</b></td></tr>';
+  });
+  h += '<tr class="sum"><th>Sum</th>' + lengder.map(l => '<td>' + len[l] + '</td>').join('') + '<td>' + rader.length + '</td></tr></tbody></table></div>';
+
+  const csv = ['Modell;Lengde;Antall utlån'].concat(
+    [].concat(...modeller.map(m => Object.keys(mod[m].l).sort(lengdeSort).map(l => m + ';' + (l === '?' ? '' : l) + ';' + mod[m].l[l])))
+  ).join('\n');
+  h += '<div class="noprint" style="margin-top:12px"><button class="btn" id="kopier" data-csv="' + esc(csv) + '">Kopier tabell (til Excel/Sheets)</button>' +
+    '<textarea id="csvBoks" hidden rows="6" style="width:100%;margin-top:10px;font:13px monospace"></textarea></div></div>';
+  return h;
+}
+
+/* ---------- IMPORT FRA EXCEL / CSV ---------- */
+let IMP = null;          // { filnavn, par:[{merke,modell,lengde,id,notat}], feil:[tekst], kolonner:tekst }
+let impMelding = '', impBare = true, impIder = [];
+
+// Minimal .xlsx-leser: zip (deflate via DecompressionStream) + XML. Ingen eksterne biblioteker.
+async function lesXlsx(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 70000); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('Fila ser ikke ut som en Excel-fil (.xlsx).');
+  const antall = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const filer = {};
+  const dek = new TextDecoder();
+  for (let n = 0; n < antall; n++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const metode = dv.getUint16(p + 10, true), str = dv.getUint32(p + 20, true);
+    const nl = dv.getUint16(p + 28, true), el = dv.getUint16(p + 30, true), kl = dv.getUint16(p + 32, true);
+    const lokal = dv.getUint32(p + 42, true);
+    filer[dek.decode(u8.subarray(p + 46, p + 46 + nl))] = { metode, str, lokal };
+    p += 46 + nl + el + kl;
+  }
+  async function hent(navn){
+    const f = filer[navn]; if (!f) return null;
+    const start = f.lokal + 30 + dv.getUint16(f.lokal + 26, true) + dv.getUint16(f.lokal + 28, true);
+    const data = u8.subarray(start, start + f.str);
+    if (f.metode === 0) return dek.decode(data);
+    if (f.metode !== 8 || typeof DecompressionStream === 'undefined') throw new Error('Nettleseren kan ikke lese denne Excel-fila. Lagre den som CSV og prøv igjen.');
+    const strøm = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return await new Response(strøm).text();
+  }
+  const xml = t => new DOMParser().parseFromString(t, 'application/xml');
+  const alle = (el, navn) => Array.from(el.getElementsByTagNameNS('*', navn));
+  // første ark i arbeidsboka
+  let arkSti = 'xl/worksheets/sheet1.xml';
+  const wb = await hent('xl/workbook.xml'), rels = await hent('xl/_rels/workbook.xml.rels');
+  if (wb && rels) {
+    const forste = alle(xml(wb), 'sheet')[0];
+    const rid = forste && (forste.getAttribute('r:id') || forste.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id'));
+    const rel = alle(xml(rels), 'Relationship').find(r => r.getAttribute('Id') === rid);
+    if (rel) { const t = rel.getAttribute('Target'); arkSti = t.charAt(0) === '/' ? t.slice(1) : 'xl/' + t.replace(/^\.\//, ''); }
+  }
+  const ss = await hent('xl/sharedStrings.xml');
+  const delte = ss ? alle(xml(ss), 'si').map(si => alle(si, 't').map(t => t.textContent).join('')) : [];
+  const arkTekst = await hent(arkSti);
+  if (!arkTekst) throw new Error('Fant ikke noe regneark i fila.');
+  const rader = [];
+  alle(xml(arkTekst), 'row').forEach(r => {
+    const rad = [];
+    alle(r, 'c').forEach((c, i) => {
+      const ref = c.getAttribute('r') || '';
+      const bokst = (/^[A-Z]+/.exec(ref) || [''])[0];
+      const kol = bokst ? bokst.split('').reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1 : i;
+      const t = c.getAttribute('t'), v = alle(c, 'v')[0];
+      let verdi = '';
+      if (t === 's') verdi = delte[+(v ? v.textContent : -1)] || '';
+      else if (t === 'inlineStr') verdi = alle(c, 't').map(x => x.textContent).join('');
+      else verdi = v ? v.textContent : '';
+      rad[kol] = verdi;
+    });
+    const nr = +r.getAttribute('r') || rader.length + 1;
+    rader[nr - 1] = Array.from(rad, x => x == null ? '' : String(x));
+  });
+  return Array.from(rader, r => r || []);
+}
+
+function lesCsv(tekst){
+  tekst = tekst.replace(/^\ufeff/, '');
+  const forste = tekst.split(/\r?\n/)[0] || '';
+  const skille = forste.indexOf('\t') >= 0 ? '\t' : (forste.split(';').length >= forste.split(',').length ? ';' : ',');
+  const rader = []; let rad = [], felt = '', i = 0, anf = false;
+  while (i < tekst.length) {
+    const c = tekst[i];
+    if (anf) { if (c === '"') { if (tekst[i + 1] === '"') { felt += '"'; i++; } else anf = false; } else felt += c; }
+    else if (c === '"') anf = true;
+    else if (c === skille) { rad.push(felt); felt = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && tekst[i + 1] === '\n') i++; rad.push(felt); rader.push(rad); rad = []; felt = ''; }
+    else felt += c;
+    i++;
+  }
+  if (felt || rad.length) { rad.push(felt); rader.push(rad); }
+  return rader;
+}
+
+const KOLNAVN = {
+  modell: /^(modell|model|skimodell|ski|produkt|produktnavn|navn)$/i,
+  merke: /^(merke|brand|produsent|merkenavn|leverandør)$/i,
+  lengde: /^(lengde|lengder|length|lengths|str|str\.|størrelse|størrelser|size|sizes|cm)$/i,
+  antall: /^(antall|antall par|ant|ant\.|stk|qty|quantity|par)$/i,
+  id: /^(id|ski-?id|nr|nummer|skinr)$/i,
+  notat: /^(notat|kommentar|note|notes|merknad)$/i
+};
+
+function tolkRader(rader){
+  const nummer = [];   // husk Excel-radnummer for feilmeldinger
+  rader = rader.filter((r, i) => { const ok = r && r.some(c => String(c).trim()); if (ok) nummer.push(i + 1); return ok; });
+  if (!rader.length) throw new Error('Fila er tom.');
+  // finn overskriftsrad blant de første 10 radene
+  let hi = -1, kart = {};
+  for (let i = 0; i < Math.min(10, rader.length) && hi < 0; i++) {
+    const k = {};
+    rader[i].forEach((c, j) => { const t = String(c).trim().replace(/\s+/g, ' '); Object.keys(KOLNAVN).forEach(n => { if (k[n] == null && KOLNAVN[n].test(t)) k[n] = j; }); });
+    if (k.modell != null && k.lengde != null) { hi = i; kart = k; }
+  }
+  if (hi < 0) {
+    // ingen overskrift: anta [Modell, Lengde] eller [Merke, Modell, Lengde]
+    const b = Math.max(...rader.map(r => r.length));
+    kart = b >= 3 ? { merke: 0, modell: 1, lengde: 2 } : { modell: 0, lengde: 1 };
+  }
+  const navn = { merke: 'Merke', modell: 'Modell', lengde: 'Lengde', antall: 'Antall', id: 'ID', notat: 'Notat' };
+  const kolonner = Object.keys(kart).map(k => navn[k]).join(', ') + (hi < 0 ? ' (antatt – fant ingen overskrifter)' : '');
+  const par = [], feil = [];
+  rader.slice(hi + 1).forEach((r, i) => {
+    const radnr = nummer[hi + 1 + i];
+    const v = k => kart[k] == null ? '' : String(r[kart[k]] == null ? '' : r[kart[k]]).trim();
+    const modell = v('modell').replace(/\s+/g, ' ');
+    const lengder = v('lengde').split(/[,;\/\s]+|\s+og\s+/i).map(x => x.replace(/cm$/i, '').replace(',', '.').trim()).filter(Boolean);
+    if (!modell && !lengder.length) return;
+    if (!modell) return feil.push('Rad ' + radnr + ': mangler modell');
+    if (!lengder.length) return feil.push('Rad ' + radnr + ': mangler lengde (' + modell + ')');
+    const dårlig = lengder.filter(l => !/^\d{2,3}(\.\d+)?$/.test(l));
+    if (dårlig.length) return feil.push('Rad ' + radnr + ': ugyldig lengde «' + dårlig.join(', ') + '» (' + modell + ')');
+    let ant = parseInt(v('antall'), 10); if (!(ant > 0)) ant = 1; if (ant > 20) ant = 20;
+    lengder.forEach(l => { for (let n = 0; n < ant; n++) par.push({ merke: v('merke'), modell: modell, lengde: String(Math.round(parseFloat(l) * 10) / 10), id: lengder.length === 1 && ant === 1 ? v('id') : '', notat: v('notat') }); });
+  });
+  return { par, feil, kolonner };
+}
+
+async function lesImportFil(fil){
+  const navn = fil.name.toLowerCase();
+  let rader;
+  if (/\.(xlsx|xlsm)$/.test(navn)) rader = await lesXlsx(await fil.arrayBuffer());
+  else if (/\.xls$/.test(navn)) throw new Error('Gamle .xls-filer støttes ikke. Lagre som .xlsx eller CSV i Excel.');
+  else rader = lesCsv(await fil.text());
+  return Object.assign({ filnavn: fil.name }, tolkRader(rader));
+}
+
+function importHtml(){
+  let h = '<details class="card noprint" id="impBoks"' + (IMP || impMelding ? ' open' : '') + '><summary>⬆ Importer fra Excel</summary><div style="margin-top:14px">';
+  if (impMelding) h += '<p style="color:var(--ok);font-weight:600;margin-top:0">' + esc(impMelding) + '</p>' +
+    (impIder.length ? '<button class="btn ok" style="margin:-4px 0 14px" data-qrider="' + esc(impIder.join(',')) + '">🖨 Skriv ut QR for de ' + impIder.length + ' nye parene</button>' : '');
+  if (!IMP) {
+    h += '<p class="small muted" style="margin-top:0">Last opp en .xlsx- eller CSV-fil med kolonnene <b>Modell</b> og <b>Lengde</b>. ' +
+      '<b>Merke</b>, <b>Antall</b>, <b>ID</b> og <b>Notat</b> er valgfritt. Én rad per par, eller alle lengder i én celle: «162, 167, 172».</p>' +
+      '<label class="btn primary" style="display:inline-flex">Velg fil<input type="file" id="impFil" accept=".xlsx,.xlsm,.csv,.txt,text/csv" hidden></label>' +
+      '<p class="err" id="impErr"></p>';
+  } else {
+    const grupper = {};
+    const visNavn = {};
+    IMP.par.forEach(x => {
+      const n = [x.merke, x.modell].filter(Boolean).join(' '), k = visNavn[n.toLowerCase()] || (visNavn[n.toLowerCase()] = n);
+      (grupper[k] = grupper[k] || []).push(x.lengde);
+    });
+    const navn = Object.keys(grupper).sort((a, b) => a.localeCompare(b, 'nb', { numeric: true }));
+    h += '<p style="margin-top:0"><b>' + esc(IMP.filnavn) + '</b>: ' + IMP.par.length + ' par i ' + navn.length + ' modeller.<br>' +
+      '<span class="small muted">Kolonner: ' + esc(IMP.kolonner) + '</span></p>';
+    h += '<div class="imp-liste">' + navn.map(n => {
+      const l = grupper[n].slice().sort((a, b) => a - b);
+      return '<div class="imp-rad"><b>' + esc(n) + '</b><span>' + l.length + ' par: ' + esc(l.join(', ')) + '</span></div>';
+    }).join('') + '</div>';
+    if (IMP.feil.length) h += '<div class="note" style="color:var(--bad);margin-top:12px"><b>' + IMP.feil.length + ' rader hoppes over:</b><br>' +
+      IMP.feil.slice(0, 8).map(esc).join('<br>') + (IMP.feil.length > 8 ? '<br>… og ' + (IMP.feil.length - 8) + ' til' : '') + '</div>';
+    h += '<label class="check" style="margin-top:12px"><input type="checkbox" id="impBare"' + (impBare ? ' checked' : '') + '> ' +
+      '<span>Fila er hele lageret – legg bare til det som mangler<br><span class="small muted" style="font-weight:400">Har dere 2 par fra før og fila sier 3, legges 1 til. Fjern krysset hvis fila bare inneholder nye ski.</span></span></label>' +
+      '<div class="row" style="margin-top:12px"><button class="btn" id="impAvbryt">Avbryt</button>' +
+      '<button class="btn primary" id="impKjor"' + (IMP.par.length ? '' : ' disabled') + '>Importer</button></div><p class="err" id="impErr"></p>';
+  }
+  return h + '</div></details>';
+}
+
+function kobleImport(){
+  const fil = document.getElementById('impFil');
+  if (fil) fil.onchange = async () => {
+    const f = fil.files && fil.files[0]; fil.value = '';
+    if (!f) return;
+    const err = document.getElementById('impErr'); err.textContent = 'Leser fila …'; impMelding = ''; impIder = [];
+    try { IMP = await lesImportFil(f); tegnAdmin(); }
+    catch (e) { err.textContent = e.message; }
+  };
+  const avb = document.getElementById('impAvbryt');
+  if (avb) avb.onclick = () => { IMP = null; impMelding = ''; tegnAdmin(); };
+  const bare = document.getElementById('impBare');
+  if (bare) bare.onchange = () => { impBare = bare.checked; };
+  const kjør = document.getElementById('impKjor');
+  if (kjør) kjør.onclick = async () => {
+    kjør.disabled = true; kjør.textContent = 'Importerer …';
+    try {
+      ADM = await api('adminImportSki', sess.get('pin'), IMP.par, impBare);
+      const i = ADM.importInfo || {};
+      impIder = i.ider || [];
+      impMelding = 'Ferdig: ' + i.lagtTil + ' par lagt til' + (i.hoppet ? ', ' + i.hoppet + ' fantes fra før' : '') + (i.ugyldige ? ', ' + i.ugyldige + ' ugyldige' : '') + '.';
+      IMP = null; tegnAdmin();
+    } catch (e) { document.getElementById('impErr').textContent = e.message; kjør.disabled = false; kjør.textContent = 'Importer'; }
+  };
+}
+
+/* ---------- QR-SKANNER i appen ---------- */
+// Prøver levende kamera først. Tillater ikke nettleseren det, tas et bilde med telefonens kamera i stedet.
+let skStream = null, skTimer = null, skFerdig = false;
+
+function idFraKode(tekst){
+  tekst = String(tekst || '').trim();
+  try { const u = new URL(tekst); const id = u.searchParams.get('ski'); if (id) return id; } catch (e) {}
+  const m = /[?&]ski=([A-Za-z0-9_-]+)/.exec(tekst);
+  if (m) return m[1];
+  return /^[A-Za-z0-9_-]{1,40}$/.test(tekst) ? tekst : null;
+}
+
+const detektor = (() => {
+  try { return ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['qr_code'] }) : null; } catch (e) { return null; }
+})();
+
+async function finnKode(kilde, b, h){
+  if (detektor) {
+    try { const r = await detektor.detect(kilde); if (r && r[0]) return r[0].rawValue; } catch (e) {}
+  }
+  if (window.jsQR) {
+    const skala = Math.min(1, 900 / Math.max(b, h));
+    const c = document.createElement('canvas');
+    c.width = Math.round(b * skala); c.height = Math.round(h * skala);
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(kilde, 0, 0, c.width, c.height);
+    const r = window.jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts: 'dontInvert' });
+    if (r) return r.data;
+  }
+  return null;
+}
+
+function apneSkanner(){
+  lukkSkanner();
+  skFerdig = false;
+  const o = document.createElement('div');
+  o.id = 'skanner';
+  o.innerHTML =
+    '<div class="sk-top"><b>Skann QR-koden på skiene</b><button class="sk-lukk" id="skLukk">Lukk</button></div>' +
+    '<div class="sk-vid" id="skVid"><video id="skVideo" playsinline muted autoplay></video><div class="sk-ramme"></div></div>' +
+    '<div class="sk-bunn"><p class="sk-tekst" id="skTekst">Hold koden inni rammen.</p>' +
+      '<label class="btn big" style="background:rgba(255,255,255,.14);color:#fff">Ta bilde i stedet' +
+      '<input type="file" accept="image/*" capture="environment" id="skFil" hidden></label>' +
+      '<form id="skNr" class="sk-nr"><input type="text" name="nr" inputmode="numeric" placeholder="Eller skriv nr. på lappen" autocomplete="off"><button class="btn primary">Åpne</button></form>' +
+      '<p class="sk-feil" id="skFeil"></p></div>';
+  document.body.appendChild(o);
+  document.getElementById('skLukk').onclick = lukkSkanner;
+  document.getElementById('skFil').onchange = lesBilde;
+  document.getElementById('skNr').onsubmit = e => {
+    e.preventDefault();
+    const nr = e.target.nr.value.trim().replace(/[^A-Za-z0-9_-]/g, '');
+    if (!nr) return;
+    skFerdig = true; lukkSkanner(); visSki(nr);
+  };
+  // Inne i Google (og andre innebygde sider) nektes levende kamera. Da åpnes telefonens kamera direkte for et bilde,
+  // i samme trykk som «Skann ski» – det må skje nå, mens trykket fortsatt gjelder.
+  let innebygd = true;
+  try { innebygd = window.self !== window.top; } catch (e) {}
+  if (innebygd || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+    fotoModus();
+    try { document.getElementById('skFil').click(); } catch (e) {}
+  } else startKamera();
+}
+
+function fotoModus(){
+  const v = document.getElementById('skVid');
+  if (!v) return;
+  v.outerHTML = '<div class="sk-alt" style="flex:1"><div style="font-size:54px">📷</div>' +
+    '<p>Ta et bilde av QR-koden og trykk «Bruk bilde».<br>Koden leses automatisk.</p>' +
+    '<p style="opacity:.7;font-size:14px">Åpnet ikke kameraet seg? Trykk på knappen under.</p></div>';
+  document.getElementById('skTekst').textContent = '';
+  const lab = document.querySelector('#skanner label');
+  if (lab) { lab.firstChild.textContent = '📷 Ta bilde av QR-koden'; lab.style.background = 'var(--accent)'; }
+}
+
+function kameraUtilgjengelig(){
+  const v = document.getElementById('skVid');
+  if (!v) return;
+  v.outerHTML = '<div class="sk-alt" style="flex:1"><div style="font-size:54px">📷</div>' +
+    '<p>Kameraet kan ikke åpnes direkte her.<br>Trykk under, ta et bilde av QR-koden og velg «Bruk bilde».</p></div>';
+  document.getElementById('skTekst').textContent = '';
+  const lab = document.querySelector('#skanner label');
+  if (lab) { lab.firstChild.textContent = '📷 Ta bilde av QR-koden'; lab.style.background = 'var(--accent)'; }
+}
+
+async function startKamera(){
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return kameraUtilgjengelig();
+  try {
+    skStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+  } catch (e) { return kameraUtilgjengelig(); }
+  const video = document.getElementById('skVideo');
+  if (!video) { stoppKamera(); return; }
+  video.srcObject = skStream;
+  try { await video.play(); } catch (e) {}
+  if (!detektor && !window.jsQR) document.getElementById('skTekst').textContent = 'Laster skanner …';
+  let opptatt = false;
+  skTimer = setInterval(async () => {
+    if (opptatt || skFerdig || !video.videoWidth) return;
+    opptatt = true;
+    try {
+      const k = await finnKode(video, video.videoWidth, video.videoHeight);
+      if (k) treff(k);
+      else if (window.jsQR || detektor) document.getElementById('skTekst').textContent = 'Hold koden inni rammen.';
+    } catch (e) {}
+    opptatt = false;
+  }, 250);
+}
+
+function lesBilde(e){
+  const fil = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!fil) return;
+  const feil = document.getElementById('skFeil');
+  feil.textContent = 'Leser bildet …';
+  const url = URL.createObjectURL(fil);
+  const img = new Image();
+  img.onload = async () => {
+    const k = await finnKode(img, img.naturalWidth, img.naturalHeight);
+    URL.revokeObjectURL(url);
+    if (k) treff(k); else feil.textContent = 'Fant ingen QR-kode i bildet. Prøv igjen litt nærmere – eller skriv nummeret på lappen.';
+  };
+  img.onerror = () => { feil.textContent = 'Kunne ikke lese bildet.'; URL.revokeObjectURL(url); };
+  img.src = url;
+}
+
+function treff(kode){
+  if (skFerdig) return;
+  const id = idFraKode(kode);
+  if (!id) { const f = document.getElementById('skFeil'); if (f) f.textContent = 'Dette er ikke en QR-kode fra demoskiene.'; return; }
+  skFerdig = true;
+  try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {}
+  lukkSkanner();
+  visSki(id);
+}
+
+function stoppKamera(){
+  clearInterval(skTimer); skTimer = null;
+  if (skStream) { skStream.getTracks().forEach(t => t.stop()); skStream = null; }
+}
+function lukkSkanner(){
+  stoppKamera();
+  const o = document.getElementById('skanner');
+  if (o) o.remove();
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest && e.target.closest('[data-skann]');
+  if (t) { e.preventDefault(); apneSkanner(); }
+});
+
+function alertBox(msg){
+  const d = document.createElement('div');
+  d.className = 'card'; d.style.cssText = 'position:fixed;left:14px;right:14px;bottom:14px;z-index:9;border:2px solid var(--bad)';
+  d.innerHTML = '<b>Feil:</b> ' + esc(msg);
+  document.body.appendChild(d); setTimeout(() => d.remove(), 4000);
+}
+
+/* ---------- Forhåndsvisning (kun når siden ikke kjører i Google) ---------- */
+const MOCK = (function(){
+  const now = Date.now(), H = 3600e3;
+  const iDag = h => { const d = new Date(); d.setHours(h, 0, 0, 0); return d.toISOString(); };
+  const ski = [
+    ['001','Nord','Tind 104','184'],['002','Nord','Tind 104','177'],['003','Nord','Vidde 96','178'],
+    ['004','Nord','Vidde 96','171'],['005','Nord','Fjell 88','176'],['006','Nord','Fjell 88','169']
+  ].map(r => ({ id: r[0], merke: r[1], modell: r[2], lengde: r[3], notat: '', aktiv: true, qr: '2026-10-01T10:00:00.000Z', navn: r[1] + ' ' + r[2] + ' ' + r[3] + ' cm' }));
+  const lan = [
+    { id: 'L1', skiId: '001', ski: ski[0].navn, navn: 'Kari Nordmann', telefon: '91234567', epost: '', type: 'Skidemo', butikk: '', utlevert: new Date(now - 1.5 * H).toISOString(), frist: new Date(now - 0.5 * H).toISOString() },
+    { id: 'L2', skiId: '005', ski: ski[4].navn, navn: 'Ola Hansen', telefon: '98765432', epost: 'ola@eksempel.no', type: 'Bekjent', butikk: '', utlevert: new Date(now - 20 * 24 * H).toISOString(), frist: new Date(now - 3 * 24 * H).toISOString() },
+    { id: 'L3', skiId: '003', ski: ski[2].navn, navn: 'Ingrid Berg', telefon: '45566778', epost: '', type: 'Butikkansatt', butikk: 'Sport Sentrum', utlevert: new Date(now - 4 * 24 * H).toISOString(), frist: new Date(now + 10 * 24 * H).toISOString() }
+  ];
+  const tlf = t => String(t || '').replace(/\D/g, '').replace(/^(0047|47)(?=\d{8}$)/, '');
+  const finn = id => { const s = ski.find(x => x.id.toLowerCase() === String(id).trim().toLowerCase()); if (!s) throw new Error('Fant ingen ski med ID «' + id + '».'); return s; };
+  const ansatte = [{ navn: 'Lars', pin: '1111', rolle: 'Ansatt', aktiv: true, rad: 2 }, { navn: 'Mari', pin: '2222', rolle: 'Admin', aktiv: true, rad: 3 }];
+  const bruker = p => {
+    if (String(p) === '1234') return { navn: 'Admin', rolle: 'Admin' };
+    const a = ansatte.find(x => x.pin === String(p) && x.aktiv);
+    if (!a) throw new Error('Feil PIN-kode. (Forhåndsvisning: 1111 eller 1234)');
+    return { navn: a.navn, rolle: a.rolle };
+  };
+  const pin = p => { if (bruker(p).rolle !== 'Admin') throw new Error('Kun administrator har tilgang til dette.'); };
+  let sist = null;
+  const data = () => {
+    const nk = s => (s.merke + ' ' + s.modell).trim().toLowerCase();
+    const sortert = ski.slice().sort((a, b) => nk(a).localeCompare(nk(b), 'nb', { numeric: true }) || (parseFloat(a.lengde) || 1e9) - (parseFloat(b.lengde) || 1e9) || a.id.localeCompare(b.id));
+    const d = { bruker: sist, ski: sortert.map(s => Object.assign({}, s, { utlant: lan.some(l => l.skiId === s.id) })), lan: lan, url: START.url };
+    if (sist.rolle === 'Admin') d.ansatte = ansatte.map(a => ({ navn: a.navn, rolle: a.rolle, aktiv: a.aktiv, rad: a.rad }));
+    return d;
+  };
+  return {
+    hentSki(id, t){
+      const s = finn(id), l = lan.find(x => x.skiId === s.id);
+      return { ski: s, utlan: l ? { fornavn: l.navn.split(' ')[0], utlevert: l.utlevert, frist: l.frist, type: l.type, mitt: !!tlf(t) && tlf(l.telefon) === tlf(t) } : null,
+        mine: tlf(t) ? lan.filter(x => tlf(x.telefon) === tlf(t) && x.skiId !== s.id).map(x => ({ id: x.id, ski: x.ski })) : [] };
+    },
+    laan(d){
+      const s = finn(d.skiId);
+      if (lan.some(x => x.skiId === s.id)) throw new Error('Disse skiene står allerede som utlånt.');
+      if (!d.pin) d.type = 'Skidemo'; else bruker(d.pin);
+      (d.leverIds || []).forEach(id => { const i = lan.findIndex(x => x.id === id); if (i >= 0) lan.splice(i, 1); });
+      let frist;
+      if (d.type === 'Skidemo') frist = new Date(Date.now() + DEMO.minutter * 60000);
+      else frist = d.frist ? new Date(d.frist + 'T18:00') : new Date(Date.now() + 14 * 24 * H);
+      lan.push({ id: 'L' + Math.random().toString(36).slice(2, 8), skiId: s.id, ski: s.navn, navn: d.navn, telefon: tlf(d.telefon), epost: d.epost, type: d.type, butikk: d.butikk, utlevert: new Date().toISOString(), frist: frist.toISOString() });
+      return { ski: s, frist: frist.toISOString(), utlevert: new Date().toISOString(), type: d.type || 'Skidemo' };
+    },
+    leverTilbake(id, t){
+      const s = finn(id), i = lan.findIndex(x => x.skiId === s.id);
+      if (i < 0) return { ski: s, alleredeLevert: true };
+      if (tlf(lan[i].telefon) !== tlf(t)) throw new Error('Mobilnummeret stemmer ikke med det som ble brukt da skiene ble lånt.');
+      lan.splice(i, 1); return { ski: s };
+    },
+    konfig(){ return { demo: DEMO, firma: FIRMA, url: START.url }; },
+    adminData(p){ sist = bruker(p); return data(); },
+    adminSki(p, id){ const b = bruker(p); const s = finn(id); return { bruker: b, ski: s, lan: lan.find(x => x.skiId === s.id) || null }; },
+    adminNyAnsatt(p, d){
+      pin(p); sist = bruker(p);
+      if (String(d.navn || '').trim().length < 2) throw new Error('Skriv inn navn.');
+      if (!/^\d{4,8}$/.test(String(d.pin || '').trim())) throw new Error('PIN-koden må være 4–8 siffer.');
+      if (d.pin === '1234' || ansatte.some(a => a.pin === d.pin)) throw new Error('Denne PIN-koden er allerede i bruk. Velg en annen.');
+      ansatte.push({ navn: d.navn.trim(), pin: d.pin.trim(), rolle: d.rolle, aktiv: true, rad: ansatte.length + 2 });
+      return data();
+    },
+    adminAnsattAktiv(p, rad, navn, aktiv){ pin(p); sist = bruker(p); const a = ansatte.find(x => x.rad === rad); if (a) a.aktiv = aktiv; return data(); },
+    adminStatistikk(p){
+      pin(p);
+      const typer = ['Skidemo', 'Skidemo', 'Skidemo', 'Skidemo', 'Bekjent', 'Butikkansatt'];
+      const vekt = [0, 0, 1, 1, 1, 2, 2, 2, 3, 4, 4, 5]; // noen modeller er mer populære
+      let frø = 7; const rnd = () => (frø = (frø * 16807) % 2147483647) / 2147483647;
+      const hist = [];
+      for (let i = 0; i < 420; i++) {
+        const s = ski[vekt[Math.floor(rnd() * vekt.length)]];
+        const t = typer[Math.floor(rnd() * typer.length)];
+        const u = now - rnd() * 420 * 24 * H;
+        const varig = t === 'Skidemo' ? (1 + rnd() * 4) * H : (3 + rnd() * 20) * 24 * H;
+        hist.push({ m: s.merke + ' ' + s.modell, l: s.lengde, t: t, u: new Date(u).toISOString(),
+          r: new Date(Math.min(u + varig, now - H)).toISOString(), k: String(90000000 + Math.floor(rnd() * 150)) });
+      }
+      lan.forEach(l => { const s = ski.find(x => x.id === l.skiId); hist.push({ m: s.merke + ' ' + s.modell, l: s.lengde, t: l.type, u: l.utlevert, r: '', k: tlf(l.telefon) }); });
+      return hist;
+    },
+    adminMottatt(p, id){ sist = bruker(p); const i = lan.findIndex(x => x.id === id); if (i >= 0) lan.splice(i, 1); return data(); },
+    adminNySki(p, d){
+      pin(p); sist = bruker(p);
+      let merke = String(d.merke || '').trim(), modell = String(d.modell || '').trim().replace(/\s+/g, ' ');
+      if (!modell) throw new Error('Skriv inn modell.');
+      const fins = ski.find(s => s.modell.toLowerCase() === modell.toLowerCase() && (!merke || s.merke.toLowerCase() === merke.toLowerCase()));
+      if (fins) { modell = fins.modell; merke = fins.merke; }
+      const lengder = String(d.lengder || '').split(/[,;\s]+/).map(x => x.replace(/cm$/i, '')).filter(Boolean);
+      if (!lengder.length) throw new Error('Skriv inn minst én lengde.');
+      if (lengder.some(l => !/^\d{2,3}(\.\d)?$/.test(l))) throw new Error('Lengder skrives som tall, f.eks. 162, 167, 172.');
+      const egen = String(d.id || '').trim();
+      if (egen && lengder.length > 1) throw new Error('Egen ID kan bare brukes når du legger inn én lengde.');
+      if (egen && ski.some(s => s.id.toLowerCase() === egen.toLowerCase())) throw new Error('ID ' + egen + ' finnes allerede.');
+      let neste = ski.reduce((m, s) => Math.max(m, +s.id || 0), 0) + 1;
+      const nye = lengder.map(l => {
+        const id = egen || String(neste++).padStart(3, '0');
+        ski.push({ id: id, merke: merke, modell: modell, lengde: l, notat: '', aktiv: true, navn: [merke, modell, l + ' cm'].filter(Boolean).join(' ') });
+        return id;
+      });
+      const r = data(); r.lagtTil = nye; return r;
+    },
+    adminImportSki(p, rader, bare){
+      pin(p); sist = bruker(p);
+      const tell = {}; ski.forEach(s => { const k = s.modell.toLowerCase() + '|' + parseFloat(s.lengde); tell[k] = (tell[k] || 0) + 1; });
+      let neste = ski.reduce((m, s) => Math.max(m, +s.id || 0), 0) + 1, lagt = 0, hoppet = 0; const nyeIder = [];
+      rader.forEach(r => {
+        const fins = ski.find(s => s.modell.toLowerCase() === r.modell.toLowerCase());
+        const modell = fins ? fins.modell : r.modell, merke = fins ? fins.merke : r.merke;
+        const k = modell.toLowerCase() + '|' + parseFloat(r.lengde);
+        if (bare && tell[k] > 0) { tell[k]--; hoppet++; return; }
+        const id = String(neste++).padStart(3, '0'); nyeIder.push(id);
+        ski.push({ id: id, merke: merke, modell: modell, lengde: r.lengde, notat: r.notat || '', aktiv: true, qr: '', navn: [merke, modell, r.lengde + ' cm'].filter(Boolean).join(' ') });
+        lagt++;
+      });
+      const d = data(); d.importInfo = { lagtTil: lagt, hoppet: hoppet, ugyldige: 0, ider: nyeIder }; return d;
+    },
+    adminSettAktiv(p, ider, aktiv){
+      pin(p); sist = bruker(p);
+      const m = {}; ider.forEach(i => m[String(i).toLowerCase()] = 1);
+      ski.forEach(x => { if (m[x.id.toLowerCase()]) x.aktiv = !!aktiv; });
+      return data();
+    },
+    adminMerkUtskrevet(p, ider){
+      pin(p); sist = bruker(p);
+      const m = {}; ider.forEach(i => m[String(i).toLowerCase()] = 1);
+      ski.forEach(x => { if (m[x.id.toLowerCase()]) x.qr = new Date().toISOString(); });
+      return data();
+    }
+  };
+})();
+
+if (PREVIEW) {
+  const bar = document.getElementById('demo');
+  bar.hidden = false;
+  bar.innerHTML = '<b>Forhåndsvisning – ingenting lagres.</b> Late som du skanner:' +
+    '<button data-v="004">Ledig ski</button><button data-v="001">Utlånt ski</button><button data-v="start">Startside</button><button data-v="admin">Ansatt (PIN 1111 · admin 1234)</button>';
+  bar.querySelectorAll('button').forEach(b => b.onclick = () => {
+    fraAdmin = false;
+    const v = b.dataset.v;
+    if (v === 'start') visStart(); else if (v === 'admin') visAdmin(); else visSki(v);
+  });
+  document.getElementById('topright').textContent = 'eksempeldata';
+}
+
+/* ---------- Start ---------- */
+function startApp(){
+  if (START.admin) visAdmin();
+  else if (START.ski) visSki(START.ski);
+  else if (PREVIEW) visSki('004');
+  else visStart();
+}
+if (NETT) {
+  // hent firmanavn, demotid og QR-adresse fra Google-skriptet (Skriptegenskaper)
+  const k = JSON.parse(store.get('konfig', 'null') || 'null');
+  if (k) { DEMO = k.demo || DEMO; FIRMA = k.firma || FIRMA; visFirma(); }
+  api('konfig').then(d => { DEMO = d.demo || DEMO; FIRMA = d.firma || FIRMA; visFirma(); store.set('konfig', JSON.stringify(d)); }).catch(() => {});
+  startApp();
+} else startApp();
+
+})();
+</script>
+</body>
+</html>
