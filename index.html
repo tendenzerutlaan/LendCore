@@ -116,6 +116,8 @@
   .btn.farlig[data-sikker="1"]{background:var(--bad);color:#fff}
   .grp .row>*{flex:initial}
   .grp .row>div:first-child{flex:1}
+  .grp.klikkbar [data-grp]{cursor:pointer}
+  .grp.klikkbar{border-bottom:0;padding-bottom:0}
   .skilist .grp{padding-bottom:10px;border-bottom:2px solid var(--line)}
   .skilist .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
   .skilist .item:last-child{border-bottom:0}
@@ -321,29 +323,84 @@ function visStart(){
   document.getElementById('adm').onclick = visAdmin;
 }
 
+/* ---------- Lokal skiliste (gjør skanning øyeblikkelig) ---------- */
+let KAT = null;
+function settKat(d){
+  if (!d || !d.ski) return;
+  const m = {};
+  d.ski.forEach(r => {
+    const id = String(r[0]), l = String(r[3] || '');
+    m[id.toLowerCase()] = { id: id, merke: r[1] || '', modell: r[2] || '', lengde: l, aktiv: !!r[4], notat: '',
+      navn: [r[1], r[2], /^\d+$/.test(l) ? l + ' cm' : l].filter(Boolean).join(' ') };
+  });
+  KAT = { ski: m, ute: new Set((d.ute || []).map(x => String(x).toLowerCase())) };
+}
+function lastKat(){ return api('katalog').then(d => { settKat(d); store.set('kat', d); }).catch(() => {}); }
+const mineLan = {
+  hent(){ return store.get('mineLan', {}); },
+  sett(id, v){ const m = this.hent(); const k = String(id).toLowerCase(); if (v) m[k] = v; else delete m[k]; store.set('mineLan', m); }
+};
+function merkUte(id, ute){ if (KAT) { const k = String(id).toLowerCase(); if (ute) KAT.ute.add(k); else KAT.ute.delete(k); } }
+const kundeSig = d => [d.ski.id, d.ski.aktiv ? 1 : 0, d.utlan ? (d.utlan.mitt ? 'mitt' : 'ute') : 'ledig'].join('|');
+const ansattSig = d => ['A', d.ski.id, d.ski.aktiv ? 1 : 0, d.lan ? d.lan.id : ''].join('|');
+let visNr = 0;
+
 /* ---------- KUNDE: ett par ski ---------- */
 let fraAdmin = false;
 async function visSki(id){
   app.className = '';
-  laster();
+  const nr = ++visNr, n = String(id).trim().toLowerCase();
   const pin = sess.get('pin');
   if (pin) {
+    // ansatt: vis straks fra oversikten telefonen allerede har, og sjekk ferske data i bakgrunnen
+    let sig = null;
+    if (ADM) {
+      const s = ADM.ski.find(x => x.id.toLowerCase() === n);
+      if (s) { const d = { bruker: ADM.bruker, ski: s, lan: ADM.lan.find(l => l.skiId.toLowerCase() === n) || null }; fraAdmin = true; tegnAnsattSki(d); sig = ansattSig(d); }
+    }
+    if (!sig) laster();
     try {
       const d = await api('adminSki', pin, id);
+      if (nr !== visNr) return;
       fraAdmin = true;
       document.getElementById('topright').textContent = d.bruker.navn + ' · ' + d.bruker.rolle + (PREVIEW ? ' · eksempeldata' : '');
-      return tegnAnsattSki(d);
+      if (ansattSig(d) !== sig) tegnAnsattSki(d);
+      return;
     } catch (e) {
-      if (!/PIN/i.test(e.message)) return feilSide(e.message, () => visSki(id));
+      if (nr !== visNr) return;
+      if (!/PIN/i.test(e.message)) { if (!sig) feilSide(e.message, () => visSki(id)); return; }
       sess.del('pin'); // utgått/deaktivert: vis kundesiden
     }
   }
   fraAdmin = false;
   const meg = store.get('meg', {});
+  // kunde: vis straks fra lokal skiliste når vi vet nok
+  let sig = null;
+  const k = KAT && KAT.ski[n];
+  if (k) {
+    const eget = mineLan.hent()[n];
+    let d = null;
+    if (!k.aktiv || (!eget && !KAT.ute.has(n))) d = { ski: k, utlan: null, mine: [] };
+    else if (eget) d = { ski: k, utlan: { fornavn: '', utlevert: eget.utlevert, frist: eget.frist, type: eget.type, mitt: true }, mine: [] };
+    if (d) { tegnSki(d, meg); sig = kundeSig(d); }
+  }
+  if (!sig) laster();
   try {
     const d = await api('hentSki', id, meg.telefon || '');
-    tegnSki(d, meg);
-  } catch (e) { feilSide(e.message, visStart); }
+    if (nr !== visNr) return;
+    merkUte(d.ski.id, !!d.utlan);
+    mineLan.sett(d.ski.id, d.utlan && d.utlan.mitt ? { utlevert: d.utlan.utlevert, frist: d.utlan.frist, type: d.utlan.type } : null);
+    if (kundeSig(d) !== sig) tegnSki(d, meg);
+    else settInnMine(d.mine || []);
+  } catch (e) { if (nr === visNr && !sig) feilSide(e.message, visStart); }
+}
+
+/* legger inn «lever samtidig tilbake»-valg i et skjema som allerede vises */
+function settInnMine(mine){
+  const b = document.getElementById('mineBoks');
+  if (!b || !mine.length || b.childElementCount) return;
+  b.innerHTML = mine.map(m => '<label class="check"><input type="checkbox" name="lever" value="' + esc(m.id) + '" checked> Lever samtidig tilbake ' + esc(m.ski) + '</label>').join('');
+  b.hidden = false;
 }
 
 function skiKort(ski, pill){
@@ -449,7 +506,7 @@ function tegnSki(d, meg){
       '<label>E-post <span class="opt">(valgfritt)</span><input type="email" name="epost" autocomplete="email" value="' + esc(meg.epost || '') + '"></label>' +
       '<label>Leveres tilbake innen<input type="date" name="frist" value="' + standard + '" min="' + isoDato(new Date()) + '"></label>' +
     '</div>' +
-    (mine ? '<div class="note" style="color:var(--ink)">' + mine + '</div>' : '') +
+    '<div class="note" id="mineBoks" style="color:var(--ink)"' + (mine ? '' : ' hidden') + '>' + mine + '</div>' +
     (fraAdmin ? '' : '<label class="check"><input type="checkbox" name="ok"> Jeg er ansvarlig for skiene til de er levert tilbake.</label>') +
     '<button class="btn primary big" id="send">Lån skiene</button><p class="err" id="err"></p></form>' + tilbakeLenke());
   kobleTilbake();
@@ -486,6 +543,8 @@ function tegnSki(d, meg){
           'Frist: <b>' + esc(fmtTid(r.frist)) + '</b>.<br><br><span class="muted small">Skann neste par, eller gå tilbake til oversikten.</span>');
       }
       store.set('meg', { navn: v.navn, telefon: v.telefon, type: v.type, butikk: v.butikk, epost: v.epost });
+      merkUte(r.ski.id, true);
+      mineLan.sett(r.ski.id, { utlevert: r.utlevert, frist: r.frist, type: r.type });
       aktivtLan(r.ski, r.utlevert, r.frist, v.telefon, true, r.type);
     } catch (ex) { err.textContent = ex.message; btn.disabled = false; btn.textContent = 'Lån skiene'; }
   };
@@ -541,6 +600,7 @@ async function lever(ski, tlf, btn){
   btn.disabled = true; btn.textContent = 'Registrerer …';
   try {
     await api('leverTilbake', ski.id, tlf);
+    merkUte(ski.id, false); mineLan.sett(ski.id, null);
     ferdig('Takk!', '<b>' + esc(ski.navn) + '</b> er levert tilbake.<br><br><span class="muted small">Vil du teste et nytt par? Skann QR-koden på neste ski.</span>');
   } catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = 'Lever tilbake'; }
 }
@@ -552,7 +612,7 @@ function ferdig(tittel, tekst){
 }
 
 /* ---------- ADMIN ---------- */
-let ADM = null, fane = 'ute', sok = '', skiSok = '', skiMelding = '', sistLagtTil = [], skiMeny = null, visInaktive = false;
+let ADM = null, fane = 'ute', sok = '', skiSok = '', skiMelding = '', sistLagtTil = [], skiMeny = null, visInaktive = false, skiApne = {};
 let qrValg = 'nye', qrIds = [], qrAv = {}, qrSporsmal = false, qrFormat = 'ark', qrStart = 1;
 const modellNavn = x => [x.merke, x.modell].filter(Boolean).join(' ');
 function qrUtvalg(){
@@ -570,9 +630,18 @@ function visAdmin(){
   if (['ark', 'etikett'].indexOf(qrFormat) < 0) qrFormat = 'ark';
   const pin = sess.get('pin');
   if (!pin) return pinSide();
-  laster();
-  api('adminData', pin).then(d => { ADM = d; tegnAdmin(); startAuto(); })
-    .catch(e => { sess.del('pin'); pinSide(e.message); });
+  if (!ADM) { const c = store.get('adm', null); if (c && c.bruker) ADM = c; }
+  if (ADM) tegnAdmin(); else laster();
+  api('adminData', pin).then(d => {
+    const endret = JSON.stringify(d) !== JSON.stringify(ADM);
+    ADM = d; store.set('adm', d);
+    const a = document.activeElement, skriver = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+    if (app.className === 'wide' && (endret || !app.querySelector('.tabs')) && !skriver) { const y = window.scrollY; tegnAdmin(); window.scrollTo(0, y); }
+    startAuto();
+  }).catch(e => {
+    if (/PIN/i.test(e.message)) { sess.del('pin'); store.set('adm', null); ADM = null; pinSide(e.message); }
+    else if (!ADM) feilSide(e.message, visAdmin);
+  });
 }
 
 /* Automatisk oppdatering av oversikten hvert 30. sekund */
@@ -586,7 +655,7 @@ function startAuto(){
     if (skiMeny || app.querySelector('details[open]:not(#inaktivBoks), [data-sikker="1"], button:disabled')) return;
     try {
       const d = await api('adminData', sess.get('pin'));
-      if (JSON.stringify(d) !== JSON.stringify(ADM)) { const y = window.scrollY; ADM = d; tegnAdmin(); window.scrollTo(0, y); }
+      if (JSON.stringify(d) !== JSON.stringify(ADM)) { const y = window.scrollY; ADM = d; store.set('adm', d); tegnAdmin(); window.scrollTo(0, y); }
     } catch (e) {}
   }, 30000);
 }
@@ -683,10 +752,12 @@ function tegnAdmin(){
       if (g && g.nokkel === navn.toLowerCase()) g.ski.push(x); else grupper.push({ nokkel: navn.toLowerCase(), navn: navn, ski: [x] });
     });
     const bekreft = (attr, verdi, tekst, klasse) => '<button class="btn ' + (klasse || '') + '" ' + attr + '="' + esc(verdi) + '">' + tekst + '</button>';
+    const alleApne = !!q || vist.filter(x => x.aktiv).length <= 60;   // mange ski: modellene vises sammenslått
     grupper.forEach(g => {
       const ute = g.ski.filter(x => x.utlant).length, ledig = g.ski.length - ute;
       const gMeny = skiMeny === 'm:' + g.nokkel;
-      html += '<div class="card skilist"><div class="grp"><div class="row" style="align-items:flex-start"><div><h2 style="margin:0">' + esc(g.navn) + '</h2>' +
+      const apen = alleApne || !!skiApne[g.nokkel];
+      html += '<div class="card skilist"><div class="grp' + (alleApne ? '' : ' klikkbar') + '"><div class="row" style="align-items:flex-start"><div' + (alleApne ? '' : ' data-grp="' + esc(g.nokkel) + '"') + '><h2 style="margin:0">' + (alleApne ? '' : (apen ? '▾ ' : '▸ ')) + esc(g.navn) + '</h2>' +
         '<div class="small muted">' + g.ski.length + ' par · ' + ledig + ' ledige' + (ute ? ' · ' + ute + ' ute' : '') + '</div></div>' +
         (erAdmin() ? '<button class="btn meny-knapp" data-meny="m:' + esc(g.nokkel) + '" aria-label="Valg for modellen">⋯</button>' : '') + '</div>' +
         (gMeny ? '<div class="meny">' +
@@ -694,7 +765,7 @@ function tegnAdmin(){
           bekreft('data-tautmodell', g.ski.map(x => x.id).join(','), 'Ta hele modellen ut av demo', 'farlig') +
           (ute ? '<div class="small" style="color:var(--warn);flex-basis:100%">' + ute + ' par er utlånt nå. De blir stående som utlånt til de er levert.</div>' : '') +
         '</div>' : '') + '</div>';
-      g.ski.forEach(x => {
+      if (apen) g.ski.forEach(x => {
         const dot = x.utlant ? 'out' : 'ok';
         const meny = skiMeny === x.id;
         html += '<div class="item"><span class="dot ' + dot + '"></span><div class="grow"><div><b>' + esc(lengdeTekst(x.lengde)) + '</b></div>' +
@@ -801,7 +872,7 @@ function tegnAdmin(){
 
   app.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
     fane = b.dataset.f;
-    if (fane === 'stat') STAT = null; // hent ferske tall hver gang fanen åpnes
+    if (fane === 'stat') hentStat(); // viser forrige tall straks og oppdaterer i bakgrunnen
     tegnAdmin();
   });
   if (fane === 'stat' && !STAT) hentStat();
@@ -818,7 +889,7 @@ function tegnAdmin(){
     }
   };
   const ut = document.getElementById('ut');
-  ut.onclick = () => { sess.del('pin'); ADM = null; clearInterval(autoTimer); document.getElementById('topright').textContent = PREVIEW ? 'eksempeldata' : ''; visStart(); };
+  ut.onclick = () => { sess.del('pin'); ADM = null; store.set('adm', null); clearInterval(autoTimer); document.getElementById('topright').textContent = PREVIEW ? 'eksempeldata' : ''; visStart(); };
 
   app.querySelectorAll('[data-rad]').forEach(b => b.onclick = async () => {
     b.disabled = true;
@@ -872,8 +943,13 @@ function tegnAdmin(){
     st.textContent = qrFormat === 'etikett'
       ? '@media print{@page{size:33.9mm 63.5mm;margin:0}}'
       : '@media print{@page{size:A4 landscape;margin:0}}';
-    try { window.print(); } catch (e) {}
-    qrSporsmal = true; tegnAdmin();
+    // lag QR-kodene til utskriften først, og gi bildene et øyeblikk til å bli klare
+    pr.disabled = true; pr.textContent = 'Klargjør …';
+    app.querySelectorAll('.utskrift .qr[data-url]').forEach(lagQr);
+    setTimeout(() => {
+      try { window.print(); } catch (e) {}
+      qrSporsmal = true; tegnAdmin();
+    }, 500);
   };
   app.querySelectorAll('[data-qrvalg]').forEach(b => b.onclick = () => { qrValg = b.dataset.qrvalg; qrAv = {}; qrSporsmal = false; tegnAdmin(); });
   const qm = document.getElementById('qrModell');
@@ -893,6 +969,7 @@ function tegnAdmin(){
     try { ADM = await api('adminMerkUtskrevet', sess.get('pin'), ider); qrSporsmal = false; qrAv = {}; if (qrValg === 'ids') qrValg = 'nye'; tegnAdmin(); }
     catch (e) { alertBox(e.message); qrJa.disabled = false; qrJa.textContent = 'Ja, merk dem'; }
   };
+  app.querySelectorAll('[data-grp]').forEach(b => b.onclick = () => { const k = b.dataset.grp; skiApne[k] = !skiApne[k]; tegnAdmin(); });
   app.querySelectorAll('[data-meny]').forEach(b => b.onclick = () => { skiMeny = skiMeny === b.dataset.meny ? null : b.dataset.meny; tegnAdmin(); });
   const settAktiv = (knapp, ider, aktiv) => async () => {
     if (!aktiv && knapp.dataset.sikker !== '1') {
@@ -910,12 +987,14 @@ function tegnAdmin(){
   app.querySelectorAll('[data-qrski]').forEach(b => b.onclick = () => visQr([b.dataset.qrski]));
   app.querySelectorAll('[data-qrider]').forEach(b => b.onclick = () => visQr(b.dataset.qrider.split(',')));
 
-  app.querySelectorAll('.qr[data-url]').forEach(el => {
-    if (window.QRCode) {
-      try { new QRCode(el, { text: el.dataset.url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M }); return; } catch (e) {}
-    }
-    el.innerHTML = '<span class="small muted" style="word-break:break-all">' + esc(el.dataset.url) + '</span>';
-  });
+  // QR-koder lages bare for lappene som vises på skjermen (raskt også med mange ski)
+  const forh = app.querySelectorAll('.forh .qr[data-url]');
+  if (forh.length) {
+    if ('IntersectionObserver' in window) {
+      const obs = new IntersectionObserver(inn => inn.forEach(x => { if (x.isIntersecting) { lagQr(x.target); obs.unobserve(x.target); } }), { rootMargin: '400px' });
+      forh.forEach(el => obs.observe(el));
+    } else forh.forEach(lagQr);
+  }
 }
 
 /* ---------- STATISTIKK ---------- */
@@ -1422,6 +1501,14 @@ document.addEventListener('click', e => {
   if (t) { e.preventDefault(); laasOppLyd(); apneSkanner(); }
 });
 
+function lagQr(el){
+  if (el.childElementCount) return;
+  if (window.QRCode) {
+    try { new QRCode(el, { text: el.dataset.url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M }); return; } catch (e) {}
+  }
+  el.innerHTML = '<span class="small muted" style="word-break:break-all">' + esc(el.dataset.url) + '</span>';
+}
+
 function alertBox(msg){
   const d = document.createElement('div');
   d.className = 'card'; d.style.cssText = 'position:fixed;left:14px;right:14px;bottom:14px;z-index:9;border:2px solid var(--bad)';
@@ -1484,6 +1571,7 @@ const MOCK = (function(){
       lan.splice(i, 1); return { ski: s };
     },
     konfig(){ return { demo: DEMO, firma: FIRMA, url: START.url }; },
+    katalog(){ return { ski: ski.map(x => [x.id, x.merke, x.modell, x.lengde, x.aktiv ? 1 : 0]), ute: lan.map(l => l.skiId.toLowerCase()), tid: Date.now() }; },
     adminData(p){ sist = bruker(p); return data(); },
     adminSki(p, id){ const b = bruker(p); const s = finn(id); return { bruker: b, ski: s, lan: lan.find(x => x.skiId === s.id) || null }; },
     adminNyAnsatt(p, d){
@@ -1583,6 +1671,9 @@ function startApp(){
   else if (PREVIEW) visSki('004');
   else visStart();
 }
+settKat(store.get('kat', null));
+lastKat();
+setInterval(() => { if (!document.hidden) lastKat(); }, 120000);
 if (NETT) {
   // hent firmanavn, demotid og QR-adresse fra Google-skriptet (Skriptegenskaper)
   const k = JSON.parse(store.get('konfig', 'null') || 'null');
